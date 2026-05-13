@@ -3,8 +3,5 @@
   "devCommand": "next dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["fra1"],
-  "env": {
-    "DATABASE_URL": "@database-url"
-  }
+  "regions": ["fra1"]
 }

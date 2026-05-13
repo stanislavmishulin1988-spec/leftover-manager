@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Статусы остатков */
+.status-available {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.status-reserved {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+}
+
+.status-used {
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200;
+}
+
+.status-scrapped,
+.status-deleted {
+  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+}
+
+/* Крупные кнопки для производства */
+.btn-large {
+  @apply px-6 py-4 text-lg font-medium rounded-lg transition-colors;
+}
+
+/* Адаптивные таблицы */
+.table-responsive {
+  @apply overflow-x-auto;
+}
+
+.table-responsive table {
+  @apply min-w-full;
+}
+
+/* Стили для сканера QR */
+#reader {
+  @apply rounded-lg overflow-hidden;
+}
+
+#reader__scan_region {
+  @apply bg-white dark:bg-gray-800;
+}
+
+/* Принудительное отображение курсора и текста в полях ввода */
+input, textarea, select {
+  caret-color: black !important;
+  cursor: text !important;
+  color: #1f2937 !important; /* Тёмный текст */
+  background-color: white !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9ca3af !important; /* Светло-серый placeholder */
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 0 !important;
+}

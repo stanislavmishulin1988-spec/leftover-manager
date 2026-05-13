@@ -1,0 +1,90 @@
+// Prisma schema для приложения учета остатков материалов
+// Версия для PostgreSQL (Neon, Supabase, Railway)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Пользователи системы
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  username  String   @unique
+  password  String
+  role      String   @default("OPERATOR") // ADMIN, OPERATOR, MASTER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addedLeftovers     Leftover[]  @relation("AddedBy")
+  deletedLeftovers   Leftover[]  @relation("DeletedBy")
+  historyActions     History[]
+  reservedLeftovers  Leftover[]  @relation("ReservedBy")
+
+  @@map("users")
+}
+
+// Остатки материалов
+model Leftover {
+  id              String        @id @default(uuid())
+  qrId            String        @unique // Уникальный ID QR-кода
+  orderNumber     String        // Номер заказа
+  materialType    String        // Вид материала (ЛДСП, МДФ, столешница)
+  materialName    String        // Название материала (Egger U708)
+  color           String        // Цвет
+  thickness       Float         // Толщина в мм
+  length          Float         // Длина в мм
+  width           Float         // Ширина в мм
+  quantity        Int           // Количество
+  qrCreatedAt     DateTime      // Дата создания QR-кода
+  addedAt         DateTime      @default(now()) // Дата добавления в базу
+  addedBy         String
+  addedByUser     User          @relation("AddedBy", fields: [addedBy], references: [id])
+  status          String        @default("AVAILABLE") // AVAILABLE, RESERVED, USED, SCRAPPED, DELETED
+  reservedForOrder String?      // Номер заказа для резервирования
+  reservedBy      String?
+  reservedByUser  User?         @relation("ReservedBy", fields: [reservedBy], references: [id])
+  reservedAt      DateTime?
+  usedForOrder    String?       // Номер заказа использования
+  usedAt          DateTime?
+  usedBy          String?
+  comment         String?
+  deletedAt       DateTime?
+  deletedBy       String?
+  deletedByUser   User?         @relation("DeletedBy", fields: [deletedBy], references: [id])
+  updatedAt       DateTime      @updatedAt
+
+  history         History[]
+
+  @@index([qrId])
+  @@index([orderNumber])
+  @@index([materialType])
+  @@index([materialName])
+  @@index([color])
+  @@index([status])
+  @@index([addedAt])
+  @@map("materials_leftovers")
+}
+
+// История действий
+model History {
+  id          String   @id @default(uuid())
+  leftoverId  String
+  leftover    Leftover @relation(fields: [leftoverId], references: [id], onDelete: Cascade)
+  actionType  String   // ADD, UPDATE_STATUS, RESERVE, USE, DELETE, UPDATE
+  oldValue    String?
+  newValue    String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([leftoverId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("history")
+}

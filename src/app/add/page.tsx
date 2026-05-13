@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
-import { Leftover } from '@/lib/types'
+import { Leftover, LeftoverStatus } from '@/lib/types'
 
 export default function AddPage() {
   const router = useRouter()

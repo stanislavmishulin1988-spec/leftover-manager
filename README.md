@@ -250,4 +250,4 @@ npm run db:backup
 ## Лицензия
 
 Внутреннее приложение для мебельного производства.
-deploy trigger g
+deploy trigger

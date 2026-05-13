@@ -128,7 +128,7 @@ export default function AddPage() {
                   </div>
                   <div>
                     <span className="text-gray-500">Статус:</span>
-                    <StatusBadge status={success.status} />
+                    <StatusBadge status={success.status as 'in_stock' | 'reserved' | 'used' | 'written_off'} />
                   </div>
                 </div>
               </div>

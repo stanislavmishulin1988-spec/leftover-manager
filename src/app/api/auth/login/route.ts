@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, signToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import { Role } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     const token = signToken({
       userId: user.id,
       username: user.username,
-      role: user.role,
+      role: user.role as Role,
     })
 
     const cookieStore = await cookies()

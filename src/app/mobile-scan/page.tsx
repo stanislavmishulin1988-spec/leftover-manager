@@ -27,27 +27,57 @@ export default function MobileScanPage() {
   const streamRef = useRef<MediaStream | null>(null)
   const scanLoopRef = useRef<number | null>(null)
   const scannerRef = useRef<any>(null)
+  const processingRef = useRef(false)
+  const startingTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
-    return () => stopScanning()
+    return () => {
+      void stopScanning()
+    }
   }, [])
 
-  const stopScanning = () => {
+  const stopScanning = async () => {
     if (scanLoopRef.current) {
       window.clearTimeout(scanLoopRef.current)
       scanLoopRef.current = null
     }
 
+    if (startingTimeoutRef.current) {
+      window.clearTimeout(startingTimeoutRef.current)
+      startingTimeoutRef.current = null
+    }
+
+    setScanning(false)
+    setLoading(false)
+    setScannerMode(null)
+
     streamRef.current?.getTracks().forEach(track => track.stop())
     streamRef.current = null
-    scannerRef.current?.stop?.().catch(() => {})
-    scannerRef.current?.clear?.().catch(() => {})
+
+    const scanner = scannerRef.current
     scannerRef.current = null
-    setScannerMode(null)
-    setScanning(false)
+
+    try {
+      if (scanner?.isScanning) {
+        await scanner.stop()
+      } else {
+        await scanner?.stop?.()
+      }
+    } catch {
+      // Scanner may already be stopped.
+    }
+
+    try {
+      await scanner?.clear?.()
+    } catch {
+      // The reader element may already be cleared.
+    }
   }
 
   const processQRCode = async (qrString: string) => {
+    if (processingRef.current) return
+    processingRef.current = true
+
     const qrData = parseUniversalQR(qrString)
 
     if (!qrString.trim()) {
@@ -56,10 +86,11 @@ export default function MobileScanPage() {
         message: 'QR-код пустой',
         error: 'empty',
       })
+      processingRef.current = false
       return
     }
 
-    stopScanning()
+    await stopScanning()
     setLoading(true)
 
     try {
@@ -87,6 +118,7 @@ export default function MobileScanPage() {
       setResult({ success: false, message: 'Ошибка подключения к серверу', error: 'network_error' })
     } finally {
       setLoading(false)
+      processingRef.current = false
     }
   }
 
@@ -119,6 +151,7 @@ export default function MobileScanPage() {
   const startScanning = async () => {
     setCameraError('')
     setResult(null)
+    processingRef.current = false
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError('Этот браузер не поддерживает доступ к камере. Откройте ссылку в Safari или Chrome.')
@@ -152,7 +185,7 @@ export default function MobileScanPage() {
     } catch (error: any) {
       console.error('Camera start error:', error)
       setCameraError(error?.message || 'Не удалось запустить камеру. Проверьте разрешение на доступ.')
-      stopScanning()
+      await stopScanning()
     } finally {
       setLoading(false)
     }
@@ -160,6 +193,13 @@ export default function MobileScanPage() {
 
   const startHtml5Scanner = async () => {
     setLoading(true)
+    setCameraError('')
+    processingRef.current = false
+
+    startingTimeoutRef.current = window.setTimeout(() => {
+      setCameraError('Камера запускается слишком долго. Нажмите "Сбросить камеру" и попробуйте еще раз.')
+      void stopScanning()
+    }, 10000)
 
     try {
       const module = await import('html5-qrcode')
@@ -171,9 +211,8 @@ export default function MobileScanPage() {
       await scanner.start(
         { facingMode: 'environment' },
         {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
+          fps: 5,
+          qrbox: { width: 220, height: 220 },
           disableFlip: false,
         },
         async (decodedText: string) => {
@@ -181,10 +220,15 @@ export default function MobileScanPage() {
         },
         () => {}
       )
+
+      if (startingTimeoutRef.current) {
+        window.clearTimeout(startingTimeoutRef.current)
+        startingTimeoutRef.current = null
+      }
     } catch (error: any) {
       console.error('HTML5 QR scanner error:', error)
       setCameraError(error?.message || 'Не удалось запустить QR-сканер. Проверьте разрешение на камеру.')
-      stopScanning()
+      await stopScanning()
     } finally {
       setLoading(false)
     }
@@ -214,7 +258,7 @@ export default function MobileScanPage() {
               Наведите камеру на QR-код
             </p>
             <p className="text-center text-xs text-gray-400 mb-4">
-              Версия сканера: universal-4
+              Версия сканера: stable-5
             </p>
 
             {!result && (
@@ -248,7 +292,13 @@ export default function MobileScanPage() {
                 )}
 
                 <button
-                  onClick={scanning ? stopScanning : startScanning}
+                  onClick={() => {
+                    if (scanning) {
+                      void stopScanning()
+                    } else {
+                      void startScanning()
+                    }
+                  }}
                   disabled={loading}
                   className={`w-full py-4 px-6 text-xl font-medium rounded-xl transition-colors ${
                     scanning
@@ -258,6 +308,18 @@ export default function MobileScanPage() {
                 >
                   {loading ? 'Загрузка...' : scanning ? 'Остановить' : 'Начать сканирование'}
                 </button>
+                {(scanning || scannerMode || cameraError) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCameraError('')
+                      void stopScanning()
+                    }}
+                    className="w-full py-3 px-6 bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium rounded-xl transition-colors"
+                  >
+                    Сбросить камеру
+                  </button>
+                )}
               </div>
             )}
 

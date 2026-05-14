@@ -65,6 +65,30 @@ const parseDimensions = (text: string, data: ParsedQRData) => {
   data.thickness ??= toNumber(dimensionMatch[3])
 }
 
+const detectMaterialType = (text: string): string | undefined => {
+  if (/(лдсп|ldsp|л д с п)/i.test(text)) return 'ЛДСП'
+  if (/(мдф|mdf)/i.test(text)) return 'МДФ'
+  if (/(хдф|hdf)/i.test(text)) return 'ХДФ'
+  if (/столеш/i.test(text)) return 'Столешница'
+  if (/кромк/i.test(text)) return 'Кромка'
+  return undefined
+}
+
+const parseCaretFormat = (text: string, data: ParsedQRData) => {
+  const parts = text.split('^').map(part => part.trim())
+  if (parts.length < 2) return false
+
+  data.orderNumber ??= parts[0]
+  data.materialName ??= parts[1]
+  data.materialType ??= detectMaterialType(parts[1])
+  data.length ??= toNumber(parts[2])
+  data.width ??= toNumber(parts[3])
+  data.thickness ??= toNumber(parts[4])
+  data.quantity ??= 1
+
+  return true
+}
+
 const parseTextPairs = (text: string, data: ParsedQRData) => {
   const pairRegex = /([A-Za-zА-Яа-яЁё_ -]{2,30})\s*[:=]\s*([^;\n\r|]+)/g
   let match: RegExpExecArray | null
@@ -78,10 +102,7 @@ const guessFreeText = (text: string, data: ParsedQRData) => {
   const lower = text.toLowerCase()
 
   if (!data.materialType) {
-    if (/(лдсп|ldsp|л д с п)/i.test(text)) data.materialType = 'ЛДСП'
-    else if (/(мдф|mdf)/i.test(text)) data.materialType = 'МДФ'
-    else if (/столеш/i.test(text)) data.materialType = 'Столешница'
-    else if (/кромк/i.test(text)) data.materialType = 'Кромка'
+    data.materialType = detectMaterialType(text)
   }
 
   if (!data.color) {
@@ -117,6 +138,12 @@ export function parseUniversalQR(qrString: string): ParsedQRData {
       Object.entries(parsed).forEach(([key, value]) => setField(data, key, value))
     }
   } catch {
+    const parsedCaret = parseCaretFormat(raw, data)
+    if (parsedCaret) {
+      parseDimensions(raw, data)
+      return data
+    }
+
     const parts = raw.split('|')
     if (parts.length >= 2) {
       ;[

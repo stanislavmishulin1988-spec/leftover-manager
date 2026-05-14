@@ -258,7 +258,7 @@ export default function MobileScanPage() {
               Наведите камеру на QR-код
             </p>
             <p className="text-center text-xs text-gray-400 mb-4">
-              Версия сканера: stable-5
+              Версия сканера: caret-8
             </p>
 
             {!result && (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
-import { Leftover } from '@/lib/types'
+import { Leftover, LeftoverStatus } from '@/lib/types'
 
 interface ScanResult {
   success: boolean

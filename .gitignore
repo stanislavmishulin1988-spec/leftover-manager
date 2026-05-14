@@ -5,3 +5,4 @@
 prisma/dev.db
 *.log
 .DS_Store
+release/

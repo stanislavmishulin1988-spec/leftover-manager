@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
-import { Leftover, LeftoverStatus } from '@/lib/types'
+import { Leftover } from '@/lib/types'
 
 export default function AddPage() {
   const router = useRouter()
@@ -41,7 +41,7 @@ export default function AddPage() {
     setLoading(true)
 
     // Валидация
-    const requiredFields = ['qrId', 'orderNumber', 'materialType', 'materialName', 'color', 'length', 'width', 'quantity']
+    const requiredFields = ['qrId', 'orderNumber', 'materialType', 'materialName', 'color', 'thickness', 'length', 'width', 'quantity']
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData])
 
     if (missingFields.length > 0) {
@@ -60,7 +60,7 @@ export default function AddPage() {
           materialType: formData.materialType,
           materialName: formData.materialName,
           color: formData.color,
-          thickness: parseFloat(formData.thickness) || 0,
+          thickness: parseFloat(formData.thickness),
           length: parseFloat(formData.length),
           width: parseFloat(formData.width),
           quantity: parseInt(formData.quantity),
@@ -128,7 +128,7 @@ export default function AddPage() {
                   </div>
                   <div>
                     <span className="text-gray-500">Статус:</span>
-                    <StatusBadge status={success.status as LeftoverStatus} />
+                    <StatusBadge status={success.status} />
                   </div>
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function AddPage() {
                 {/* Толщина */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Толщина (мм)
+                    Толщина (мм) *
                   </label>
                   <input
                     type="number"
@@ -265,6 +265,7 @@ export default function AddPage() {
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                     placeholder="16"
                     step="0.1"
+                    required
                   />
                 </div>
 

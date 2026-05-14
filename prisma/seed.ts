@@ -97,7 +97,7 @@ async function main() {
   ]
 
   for (const leftover of testLeftovers) {
-    await prisma.leftover.upsert({
+    const savedLeftover = await prisma.leftover.upsert({
       where: { qrId: leftover.qrId },
       update: {},
       create: leftover,
@@ -106,7 +106,7 @@ async function main() {
     // Запись в историю
     await prisma.history.create({
       data: {
-        leftoverId: leftover.qrId,
+        leftoverId: savedLeftover.id,
         actionType: 'ADD',
         userId: leftover.addedBy,
         comment: 'Тестовая запись при начальном заполнении',

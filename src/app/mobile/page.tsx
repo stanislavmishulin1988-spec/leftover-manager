@@ -90,7 +90,7 @@ export default function MobilePage() {
           materialType: formData.materialType,
           materialName: formData.materialName,
           color: formData.color,
-          thickness: parseFloat(formData.thickness) || 0,
+          thickness: parseFloat(formData.thickness),
           length: parseFloat(formData.length),
           width: parseFloat(formData.width),
           quantity: parseInt(formData.quantity),
@@ -293,13 +293,14 @@ export default function MobilePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Толщина</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Толщина *</label>
                 <input
                   type="number"
                   value={formData.thickness}
                   onChange={e => setFormData({ ...formData, thickness: e.target.value })}
                   className="w-full px-3 py-3 border rounded-lg text-lg"
                   placeholder="16"
+                  required
                 />
               </div>
             </div>

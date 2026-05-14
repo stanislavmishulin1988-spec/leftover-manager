@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { promises as fs } from 'fs'
 import path from 'path'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST() {
   try {
@@ -51,15 +53,19 @@ export async function GET() {
 
     try {
       const files = await fs.readdir(backupDir)
-      const backupFiles = files
-        .filter(f => f.endsWith('.db'))
-        .map(f => ({
-          filename: f,
-          createdAt: new Date(
-            path.join(backupDir, f)
-          ).toISOString(),
-        }))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      const backupFiles = await Promise.all(
+        files
+          .filter(f => f.endsWith('.db'))
+          .map(async f => {
+            const stat = await fs.stat(path.join(backupDir, f))
+            return {
+              filename: f,
+              createdAt: stat.birthtime.toISOString(),
+            }
+          })
+      )
+
+      backupFiles.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
       return NextResponse.json({ backups: backupFiles })
     } catch {

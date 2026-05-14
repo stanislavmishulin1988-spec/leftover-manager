@@ -117,22 +117,22 @@ export default function SettingsPage() {
     }
   }
 
-  const getRoleLabel = (role: Role) => {
+  const getRoleLabel = (role: Role | string) => {
     const labels: Record<Role, string> = {
       ADMIN: 'Администратор',
       OPERATOR: 'Оператор',
       MASTER: 'Мастер',
     }
-    return labels[role]
+    return labels[role as Role] ?? role
   }
 
-  const getRoleBadgeColor = (role: Role) => {
+  const getRoleBadgeColor = (role: Role | string) => {
     const colors: Record<Role, string> = {
       ADMIN: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       MASTER: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       OPERATOR: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     }
-    return colors[role]
+    return colors[role as Role] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
   }
 
   return (

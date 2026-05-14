@@ -36,6 +36,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!['ADMIN', 'OPERATOR', 'MASTER'].includes(user.role)) {
+      return NextResponse.json(
+        { error: 'У пользователя неверная роль' },
+        { status: 500 }
+      )
+    }
+
     const token = signToken({
       userId: user.id,
       username: user.username,

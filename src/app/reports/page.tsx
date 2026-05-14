@@ -110,7 +110,7 @@ export default function ReportsPage() {
     }
   }
 
-  const getStatusLabel = (status: LeftoverStatus) => {
+  const getStatusLabel = (status: LeftoverStatus | string) => {
     const labels: Record<LeftoverStatus, string> = {
       AVAILABLE: 'В наличии',
       RESERVED: 'Зарезервирован',
@@ -118,7 +118,7 @@ export default function ReportsPage() {
       SCRAPPED: 'Списан',
       DELETED: 'Удален',
     }
-    return labels[status]
+    return labels[status as LeftoverStatus] ?? status
   }
 
   // Группировка данных

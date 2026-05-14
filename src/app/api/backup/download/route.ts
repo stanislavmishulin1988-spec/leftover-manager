@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { promises as fs } from 'fs'
 import path from 'path'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -17,7 +19,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Не указано имя файла' }, { status: 400 })
     }
 
-    const backupPath = path.join(process.cwd(), 'backups', filename)
+    const safeFilename = path.basename(filename)
+    if (safeFilename !== filename || !safeFilename.endsWith('.db')) {
+      return NextResponse.json({ error: 'Некорректное имя файла' }, { status: 400 })
+    }
+
+    const backupPath = path.join(process.cwd(), 'backups', safeFilename)
 
     try {
       const fileBuffer = await fs.readFile(backupPath)
@@ -25,7 +32,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(fileBuffer, {
         headers: {
           'Content-Type': 'application/octet-stream',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Disposition': `attachment; filename="${safeFilename}"`,
         },
       })
     } catch {

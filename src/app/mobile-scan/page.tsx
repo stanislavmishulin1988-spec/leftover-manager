@@ -1,169 +1,51 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
-import { Leftover, LeftoverStatus } from '@/lib/types'
+import { Leftover } from '@/lib/types'
+
+type ScanResult = {
+  success: boolean
+  message: string
+  leftover?: Leftover
+  error?: string
+}
+
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>
+}
 
 export default function MobileScanPage() {
   const [scanning, setScanning] = useState(false)
-  const [result, setResult] = useState<{
-    success: boolean
-    message: string
-    leftover?: Leftover
-    error?: string
-  } | null>(null)
   const [loading, setLoading] = useState(false)
   const [cameraError, setCameraError] = useState('')
-  const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([])
-  const [selectedCamera, setSelectedCamera] = useState('')
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const scannerRef = useRef<any>(null)
+  const [result, setResult] = useState<ScanResult | null>(null)
+  const [manualInput, setManualInput] = useState('')
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const scanLoopRef = useRef<number | null>(null)
 
-  const getHtml5Qrcode = async () => {
-    const module = await import('html5-qrcode')
-    return module.Html5Qrcode
-  }
-
-  // Запрос разрешения на камеру
   useEffect(() => {
-    requestCameraPermission()
-
-    return () => {
-      scannerRef.current?.stop?.().catch(() => {})
-      scannerRef.current = null
-    }
+    return () => stopScanning()
   }, [])
 
-  const requestCameraPermission = async () => {
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setHasPermission(false)
-        setCameraError('Браузер не поддерживает доступ к камере. Откройте ссылку в Safari или Chrome.')
-        return
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' } // Тыловая камера
-      })
-
-      // Останавливаем поток сразу после получения разрешения
-      stream.getTracks().forEach(track => track.stop())
-      setHasPermission(true)
-
-      // Загружаем список камер после получения разрешения
-      await loadCameras()
-    } catch (error) {
-      console.error('Camera permission error:', error)
-      setHasPermission(false)
-      setCameraError('Нет доступа к камере. Разрешите доступ в настройках браузера.')
-    }
-  }
-
-  const loadCameras = async () => {
-    try {
-      const Html5Qrcode = await getHtml5Qrcode()
-      const cameras = await Html5Qrcode.getCameras()
-      console.log('Available cameras:', cameras)
-
-      const cameraList = cameras.map(c => ({
-        id: c.id,
-        label: c.label || `Camera ${cameras.indexOf(c) + 1}`
-      }))
-
-      setCameras(cameraList)
-
-      // Выбираем тыловую камеру по умолчанию
-      const backCamera = cameraList.find(c =>
-        c.label.toLowerCase().includes('back') ||
-        c.label.toLowerCase().includes('rear') ||
-        c.label.toLowerCase().includes('environment')
-      )
-
-      if (backCamera) {
-        setSelectedCamera(backCamera.id)
-      } else if (cameraList.length > 0) {
-        setSelectedCamera(cameraList[0].id)
-      }
-    } catch (error) {
-      console.error('Error loading cameras:', error)
-      setCameraError('Не удалось получить список камер')
-    }
-  }
-
-  const startScanning = async () => {
-    if (!selectedCamera) {
-      setCameraError('Выберите камеру')
-      return
+  const stopScanning = () => {
+    if (scanLoopRef.current) {
+      window.clearTimeout(scanLoopRef.current)
+      scanLoopRef.current = null
     }
 
-    setCameraError('')
-    setLoading(true)
-    setResult(null)
-
-    try {
-      // Останавливаем предыдущий сканер если есть
-      if (scannerRef.current) {
-        await scannerRef.current.stop().catch(() => {})
-        scannerRef.current = null
-      }
-
-      const Html5Qrcode = await getHtml5Qrcode()
-      const scanner = new Html5Qrcode('reader')
-      scannerRef.current = scanner
-
-      await scanner.start(
-        selectedCamera,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          disableFlip: false,
-        },
-        onScanSuccess,
-        onScanError
-      )
-
-      setScanning(true)
-    } catch (error: any) {
-      console.error('Error starting scanner:', error)
-      setCameraError(error.message || 'Ошибка запуска сканера')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const onScanSuccess = async (decodedText: string) => {
-    console.log('QR Code detected:', decodedText)
-
-    // Останавливаем сканирование после успешного считывания
-    await scannerRef.current?.stop().catch(() => {})
-    scannerRef.current = null
-    setScanning(false)
-
-    // Обрабатываем результат
-    await processQRCode(decodedText)
-  }
-
-  const onScanError = (error: any) => {
-    // Игнорируем ошибки сканирования (когда код не найден в кадре)
-    if (error?.name !== 'NotFoundException') {
-      console.warn('Scan error:', error)
-    }
-  }
-
-  const stopScanning = async () => {
-    await scannerRef.current?.stop().catch(() => {})
-    scannerRef.current = null
+    streamRef.current?.getTracks().forEach(track => track.stop())
+    streamRef.current = null
     setScanning(false)
   }
 
   const parseQRData = (qrString: string): any => {
     try {
       const parsed = JSON.parse(qrString)
-      if (parsed.id && parsed.orderNumber && parsed.materialType) {
-        return parsed
-      }
+      if (parsed.id && parsed.orderNumber && parsed.materialType) return parsed
     } catch {
       const parts = qrString.split('|')
       if (parts.length >= 10) {
@@ -176,7 +58,7 @@ export default function MobileScanPage() {
           thickness: parseFloat(parts[5]),
           length: parseFloat(parts[6]),
           width: parseFloat(parts[7]),
-          quantity: parseInt(parts[8]),
+          quantity: parseInt(parts[8], 10),
           createdAt: parts[9],
           comment: parts[10] || '',
         }
@@ -186,7 +68,7 @@ export default function MobileScanPage() {
   }
 
   const processQRCode = async (qrString: string) => {
-    const qrData = parseQRData(qrString)
+    const qrData = parseQRData(qrString.trim())
 
     if (!qrData) {
       setResult({
@@ -197,6 +79,7 @@ export default function MobileScanPage() {
       return
     }
 
+    stopScanning()
     setLoading(true)
 
     try {
@@ -205,15 +88,11 @@ export default function MobileScanPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(qrData),
       })
-
       const data = await res.json()
 
       if (res.ok) {
-        setResult({
-          success: true,
-          message: 'Остаток успешно добавлен!',
-          leftover: data.leftover,
-        })
+        setResult({ success: true, message: 'Остаток успешно добавлен!', leftover: data.leftover })
+        setManualInput('')
       } else if (data.error === 'duplicate') {
         setResult({
           success: false,
@@ -222,38 +101,85 @@ export default function MobileScanPage() {
           error: 'duplicate',
         })
       } else {
-        setResult({
-          success: false,
-          message: data.error || 'Ошибка добавления',
-          error: 'api_error',
-        })
+        setResult({ success: false, message: data.error || 'Ошибка добавления', error: 'api_error' })
       }
-    } catch (error) {
-      console.error('Network error:', error)
-      setResult({
-        success: false,
-        message: 'Ошибка подключения к серверу',
-        error: 'network_error',
-      })
+    } catch {
+      setResult({ success: false, message: 'Ошибка подключения к серверу', error: 'network_error' })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleScanAgain = () => {
-    setResult(null)
-    startScanning()
+  const scanFrame = async (detector: InstanceType<BarcodeDetectorConstructor>) => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+
+    if (!video || !canvas || !streamRef.current) return
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const context = canvas.getContext('2d')
+
+      if (context && canvas.width > 0 && canvas.height > 0) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const codes = await detector.detect(canvas)
+        const decodedText = codes[0]?.rawValue
+
+        if (decodedText) {
+          await processQRCode(decodedText)
+          return
+        }
+      }
+    }
+
+    scanLoopRef.current = window.setTimeout(() => scanFrame(detector), 250)
   }
 
-  const getStatusLabel = (status: LeftoverStatus | string) => {
-    const labels: Record<string, string> = {
-      AVAILABLE: 'В наличии',
-      RESERVED: 'Зарезервирован',
-      USED: 'Использован',
-      SCRAPPED: 'Списан',
-      DELETED: 'Удален',
+  const startScanning = async () => {
+    setCameraError('')
+    setResult(null)
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Этот браузер не поддерживает доступ к камере. Откройте ссылку в Safari или Chrome.')
+      return
     }
-    return labels[status] || status
+
+    const BarcodeDetector = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector
+    if (!BarcodeDetector) {
+      setCameraError('Этот браузер не поддерживает сканирование QR камерой. Вставьте данные QR-кода в поле ниже.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      })
+      streamRef.current = stream
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+
+      const detector = new BarcodeDetector({ formats: ['qr_code'] })
+      setScanning(true)
+      scanFrame(detector)
+    } catch (error: any) {
+      console.error('Camera start error:', error)
+      setCameraError(error?.message || 'Не удалось запустить камеру. Проверьте разрешение на доступ.')
+      stopScanning()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleManualSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    if (manualInput.trim()) processQRCode(manualInput)
   }
 
   return (
@@ -264,79 +190,31 @@ export default function MobileScanPage() {
         <div className="max-w-lg mx-auto">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 text-center">
-              📱 Мобильное сканирование
+              Мобильное сканирование
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
               Наведите камеру на QR-код
             </p>
 
-            {/* Проверка разрешения */}
-            {hasPermission === false && (
-              <div className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg mb-4 text-center">
-                <p className="font-medium mb-2">Нет доступа к камере</p>
-                <p className="text-sm">
-                  Разрешите доступ к камере в настройках браузера и обновите страницу
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm"
-                >
-                  Обновить страницу
-                </button>
-              </div>
-            )}
-
-            {/* Выбор камеры */}
-            {!scanning && cameras.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Камера
-                </label>
-                <select
-                  value={selectedCamera}
-                  onChange={e => setSelectedCamera(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                >
-                  {cameras.map(camera => (
-                    <option key={camera.id} value={camera.id}>
-                      {camera.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Область сканера */}
             {!result && (
               <div className="space-y-4">
-                <div
-                  id="reader"
-                  className="w-full bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden"
-                  style={{ minHeight: scanning ? '300px' : '200px' }}
-                >
+                <div className="w-full bg-black rounded-xl overflow-hidden aspect-square flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    className={`h-full w-full object-cover ${scanning ? 'block' : 'hidden'}`}
+                    playsInline
+                    muted
+                  />
                   {!scanning && (
-                    <div className="h-full flex items-center justify-center py-20">
-                      <div className="text-center">
-                        <span className="text-6xl mb-4 block">📷</span>
-                        {hasPermission === null && (
-                          <p className="text-gray-500 dark:text-gray-400">
-                            Запрос доступа к камере...
-                          </p>
-                        )}
-                        {hasPermission === true && cameras.length === 0 && (
-                          <p className="text-gray-500 dark:text-gray-400">
-                            Камеры не найдены
-                          </p>
-                        )}
-                        {hasPermission === true && cameras.length > 0 && (
-                          <p className="text-gray-500 dark:text-gray-400">
-                            Нажмите &quot;Начать сканирование&quot;
-                          </p>
-                        )}
-                      </div>
+                    <div className="text-center px-6">
+                      <span className="text-6xl mb-4 block">📷</span>
+                      <p className="text-gray-300">
+                        Нажмите кнопку ниже, чтобы включить камеру
+                      </p>
                     </div>
                   )}
                 </div>
+                <canvas ref={canvasRef} className="hidden" />
 
                 {cameraError && (
                   <div className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg text-center">
@@ -344,143 +222,88 @@ export default function MobileScanPage() {
                   </div>
                 )}
 
-                {hasPermission === true && (
-                  <button
-                    onClick={scanning ? stopScanning : startScanning}
-                    disabled={loading || cameras.length === 0}
-                    className={`w-full py-4 px-6 text-xl font-medium rounded-xl transition-colors ${
-                      scanning
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : 'bg-primary-600 hover:bg-primary-700 text-white'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {loading
-                      ? 'Загрузка...'
-                      : scanning
-                      ? 'Остановить'
-                      : 'Начать сканирование'}
-                  </button>
-                )}
+                <button
+                  onClick={scanning ? stopScanning : startScanning}
+                  disabled={loading}
+                  className={`w-full py-4 px-6 text-xl font-medium rounded-xl transition-colors ${
+                    scanning
+                      ? 'bg-red-500 hover:bg-red-600 text-white'
+                      : 'bg-primary-600 hover:bg-primary-700 text-white'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {loading ? 'Загрузка...' : scanning ? 'Остановить' : 'Начать сканирование'}
+                </button>
               </div>
             )}
 
-            {/* Результат */}
             {result && (
-              <div
-                className={`p-6 rounded-xl ${
-                  result.success
-                    ? 'bg-green-100 dark:bg-green-900'
-                    : 'bg-yellow-100 dark:bg-yellow-900'
-                }`}
-              >
-                <div className="flex items-start space-x-4">
-                  <span className="text-3xl">
-                    {result.success ? '✅' : '⚠️'}
-                  </span>
-                  <div className="flex-1">
-                    <p
-                      className={`text-lg font-medium ${
-                        result.success
-                          ? 'text-green-800 dark:text-green-200'
-                          : 'text-yellow-800 dark:text-yellow-200'
-                      }`}
-                    >
-                      {result.message}
-                    </p>
+              <div className={`p-6 rounded-xl ${result.success ? 'bg-green-100 dark:bg-green-900' : 'bg-yellow-100 dark:bg-yellow-900'}`}>
+                <p className={`text-lg font-medium ${result.success ? 'text-green-800 dark:text-green-200' : 'text-yellow-800 dark:text-yellow-200'}`}>
+                  {result.message}
+                </p>
 
-                    {result.leftover && (
-                      <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-gray-500">ID:</span>
-                            <span className="ml-2 font-medium dark:text-white">
-                              {result.leftover.qrId}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Материал:</span>
-                            <span className="ml-2 font-medium dark:text-white">
-                              {result.leftover.materialName}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Размер:</span>
-                            <span className="ml-2 font-medium dark:text-white">
-                              {result.leftover.length} × {result.leftover.width} мм
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Статус:</span>
-                            <span className="ml-2">
-                              <StatusBadge status={result.leftover.status as LeftoverStatus} />
-                            </span>
-                          </div>
-                        </div>
-                        {result.error === 'duplicate' && (
-                          <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                            Добавлен:{' '}
-                            {new Date(result.leftover.addedAt).toLocaleDateString('ru-RU')}
-                          </p>
-                        )}
-                        <a
-                          href={`/leftovers/${result.leftover.id}`}
-                          className="mt-3 inline-block text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                        >
-                          Подробнее →
-                        </a>
+                {result.leftover && (
+                  <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-500">ID:</span>
+                        <span className="ml-2 font-medium dark:text-white">{result.leftover.qrId}</span>
                       </div>
-                    )}
-
-                    <button
-                      onClick={handleScanAgain}
-                      className="mt-4 w-full py-3 px-6 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+                      <div>
+                        <span className="text-gray-500">Материал:</span>
+                        <span className="ml-2 font-medium dark:text-white">{result.leftover.materialName}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Размер:</span>
+                        <span className="ml-2 font-medium dark:text-white">
+                          {result.leftover.length} × {result.leftover.width} мм
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Статус:</span>
+                        <span className="ml-2">
+                          <StatusBadge status={result.leftover.status} />
+                        </span>
+                      </div>
+                    </div>
+                    <a
+                      href={`/leftovers/${result.leftover.id}`}
+                      className="mt-3 inline-block text-primary-600 hover:text-primary-700 dark:text-primary-400"
                     >
-                      Сканировать еще
-                    </button>
+                      Подробнее →
+                    </a>
                   </div>
-                </div>
+                )}
+
+                <button
+                  onClick={() => setResult(null)}
+                  className="mt-4 w-full py-3 px-6 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Сканировать еще
+                </button>
               </div>
             )}
           </div>
 
-          {/* Инструкция */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <form onSubmit={handleManualSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
             <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
-              Как использовать
+              Ручной ввод QR
             </h2>
-            <ol className="space-y-3 text-gray-700 dark:text-gray-300">
-              <li className="flex items-start">
-                <span className="flex-shrink-0 w-6 h-6 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm mr-3">
-                  1
-                </span>
-                <span>Разрешите доступ к камере</span>
-              </li>
-              <li className="flex items-start">
-                <span className="flex-shrink-0 w-6 h-6 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm mr-3">
-                  2
-                </span>
-                <span>Выберите камеру (тыловую)</span>
-              </li>
-              <li className="flex items-start">
-                <span className="flex-shrink-0 w-6 h-6 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm mr-3">
-                  3
-                </span>
-                <span>Нажмите &quot;Начать сканирование&quot;</span>
-              </li>
-              <li className="flex items-start">
-                <span className="flex-shrink-0 w-6 h-6 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm mr-3">
-                  4
-                </span>
-                <span>Наведите камеру на QR-код остатка</span>
-              </li>
-              <li className="flex items-start">
-                <span className="flex-shrink-0 w-6 h-6 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm mr-3">
-                  5
-                </span>
-                <span>Данные автоматически попадут в базу</span>
-              </li>
-            </ol>
-          </div>
+            <textarea
+              value={manualInput}
+              onChange={event => setManualInput(event.target.value)}
+              rows={5}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+              placeholder='{"id":"OST-2026-0001",...}'
+            />
+            <button
+              type="submit"
+              disabled={loading || !manualInput.trim()}
+              className="mt-4 w-full py-3 px-6 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Обработать QR
+            </button>
+          </form>
         </div>
       </main>
     </div>

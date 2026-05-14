@@ -20,10 +20,12 @@ export default function MobileScanPage() {
   const [cameraError, setCameraError] = useState('')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [manualInput, setManualInput] = useState('')
+  const [scannerMode, setScannerMode] = useState<'native' | 'html5' | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanLoopRef = useRef<number | null>(null)
+  const scannerRef = useRef<any>(null)
 
   useEffect(() => {
     return () => stopScanning()
@@ -37,6 +39,10 @@ export default function MobileScanPage() {
 
     streamRef.current?.getTracks().forEach(track => track.stop())
     streamRef.current = null
+    scannerRef.current?.stop?.().catch(() => {})
+    scannerRef.current?.clear?.().catch(() => {})
+    scannerRef.current = null
+    setScannerMode(null)
     setScanning(false)
   }
 
@@ -145,13 +151,14 @@ export default function MobileScanPage() {
 
     const BarcodeDetector = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector
     if (!BarcodeDetector) {
-      setCameraError('Этот браузер не поддерживает сканирование QR камерой. Вставьте данные QR-кода в поле ниже.')
+      await startHtml5Scanner()
       return
     }
 
     setLoading(true)
 
     try {
+      setScannerMode('native')
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
         audio: false,
@@ -169,6 +176,38 @@ export default function MobileScanPage() {
     } catch (error: any) {
       console.error('Camera start error:', error)
       setCameraError(error?.message || 'Не удалось запустить камеру. Проверьте разрешение на доступ.')
+      stopScanning()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const startHtml5Scanner = async () => {
+    setLoading(true)
+
+    try {
+      const module = await import('html5-qrcode')
+      const scanner = new module.Html5Qrcode('reader')
+      scannerRef.current = scanner
+      setScannerMode('html5')
+      setScanning(true)
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          disableFlip: false,
+        },
+        async (decodedText: string) => {
+          await processQRCode(decodedText)
+        },
+        () => {}
+      )
+    } catch (error: any) {
+      console.error('HTML5 QR scanner error:', error)
+      setCameraError(error?.message || 'Не удалось запустить QR-сканер. Проверьте разрешение на камеру.')
       stopScanning()
     } finally {
       setLoading(false)
@@ -199,7 +238,7 @@ export default function MobileScanPage() {
               Наведите камеру на QR-код
             </p>
             <p className="text-center text-xs text-gray-400 mb-4">
-              Версия сканера: native-2
+              Версия сканера: camera-3
             </p>
 
             {!result && (
@@ -207,11 +246,15 @@ export default function MobileScanPage() {
                 <div className="w-full bg-black rounded-xl overflow-hidden aspect-square flex items-center justify-center">
                   <video
                     ref={videoRef}
-                    className={`h-full w-full object-cover ${scanning ? 'block' : 'hidden'}`}
+                    className={`h-full w-full object-cover ${scanning && scannerMode === 'native' ? 'block' : 'hidden'}`}
                     playsInline
                     muted
                   />
-                  {!scanning && (
+                  <div
+                    id="reader"
+                    className={`h-full w-full ${scanning && scannerMode === 'html5' ? 'block' : 'hidden'}`}
+                  />
+                  {!scanning && !scannerMode && (
                     <div className="text-center px-6">
                       <span className="text-6xl mb-4 block">📷</span>
                       <p className="text-gray-300">

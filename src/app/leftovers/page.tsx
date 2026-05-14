@@ -68,6 +68,10 @@ export default function LeftoversPage() {
     return labels[status]
   }
 
+  const missingValue = (label = 'Не указано') => (
+    <span className="font-medium text-red-600 dark:text-red-400">{label}</span>
+  )
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
@@ -226,20 +230,25 @@ export default function LeftoversPage() {
                         {leftover.qrId}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        <div className="font-medium">{leftover.materialName}</div>
-                        <div className="text-xs text-gray-500">{leftover.color}</div>
+                        <div className="font-medium">
+                          {leftover.materialName || missingValue('Материал не указан')}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {leftover.color || missingValue('Цвет не указан')}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {leftover.length} × {leftover.width} мм
-                        {leftover.thickness > 0 && (
-                          <div className="text-xs text-gray-500">{leftover.thickness} мм</div>
-                        )}
+                        {leftover.length > 0 ? leftover.length : missingValue('длина?')} ×{' '}
+                        {leftover.width > 0 ? leftover.width : missingValue('ширина?')} мм
+                        <div className="text-xs text-gray-500">
+                          {leftover.thickness > 0 ? `${leftover.thickness} мм` : missingValue('Толщина не указана')}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {leftover.quantity} шт.
+                        {leftover.quantity > 0 ? `${leftover.quantity} шт.` : missingValue('Кол-во не указано')}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {leftover.orderNumber}
+                        {leftover.orderNumber || missingValue('Заказ не указан')}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <StatusBadge status={leftover.status as LeftoverStatus} />

@@ -1,17 +1,23 @@
 import { z } from 'zod'
 
+const optionalNumber = z.preprocess(value => {
+  if (value === undefined || value === null || value === '') return undefined
+  if (typeof value === 'string') return Number(value.replace(',', '.'))
+  return value
+}, z.number().nonnegative().optional())
+
 // Схема для данных QR-кода
 export const qrDataSchema = z.object({
-  id: z.string().min(1, 'ID обязателен'),
-  orderNumber: z.string().min(1, 'Номер заказа обязателен'),
-  materialType: z.string().min(1, 'Вид материала обязателен'),
-  materialName: z.string().min(1, 'Название материала обязательно'),
-  color: z.string().min(1, 'Цвет обязателен'),
-  thickness: z.number().positive('Толщина должна быть больше 0'),
-  length: z.number().positive('Длина должна быть больше 0'),
-  width: z.number().positive('Ширина должна быть больше 0'),
-  quantity: z.number().int().positive('Количество должно быть больше 0'),
-  createdAt: z.string(),
+  id: z.string().optional(),
+  orderNumber: z.string().optional(),
+  materialType: z.string().optional(),
+  materialName: z.string().optional(),
+  color: z.string().optional(),
+  thickness: optionalNumber,
+  length: optionalNumber,
+  width: optionalNumber,
+  quantity: optionalNumber,
+  createdAt: z.string().optional(),
   comment: z.string().optional(),
 })
 

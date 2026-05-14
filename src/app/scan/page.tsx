@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
 import { Leftover, LeftoverStatus } from '@/lib/types'
+import { parseUniversalQR } from '@/lib/qr'
 
 interface ScanResult {
   success: boolean
@@ -38,36 +39,6 @@ export default function ScanPage() {
     }
   }
 
-  const parseQRData = (qrString: string): any => {
-    // Попытка распарсить JSON
-    try {
-      const parsed = JSON.parse(qrString)
-      if (parsed.id && parsed.orderNumber && parsed.materialType) {
-        return parsed
-      }
-    } catch {
-      // Не JSON, пробуем распарсить как строку с разделителями
-      // Формат: ID|orderNumber|materialType|materialName|color|thickness|length|width|quantity|createdAt
-      const parts = qrString.split('|')
-      if (parts.length >= 10) {
-        return {
-          id: parts[0],
-          orderNumber: parts[1],
-          materialType: parts[2],
-          materialName: parts[3],
-          color: parts[4],
-          thickness: parseFloat(parts[5]),
-          length: parseFloat(parts[6]),
-          width: parseFloat(parts[7]),
-          quantity: parseInt(parts[8]),
-          createdAt: parts[9],
-          comment: parts[10] || '',
-        }
-      }
-    }
-    return null
-  }
-
   const handleScan = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
 
@@ -79,18 +50,7 @@ export default function ScanPage() {
     setLoading(true)
     setResult(null)
 
-    const qrData = parseQRData(qrInput.trim())
-
-    if (!qrData) {
-      setResult({
-        success: false,
-        message: 'Неверный формат QR-кода',
-        error: 'invalid_format',
-      })
-      setLoading(false)
-      setQrInput('')
-      return
-    }
+    const qrData = parseUniversalQR(qrInput.trim())
 
     try {
       const res = await fetch('/api/leftovers', {

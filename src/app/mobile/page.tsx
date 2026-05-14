@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Leftover } from '@/lib/types'
+import { parseUniversalQR } from '@/lib/qr'
 
 export default function MobilePage() {
   const router = useRouter()
@@ -56,7 +57,7 @@ export default function MobilePage() {
     if (!scanInput.trim()) return
 
     try {
-      const qrData = JSON.parse(scanInput.trim())
+      const qrData = parseUniversalQR(scanInput.trim())
       const res = await fetch('/api/leftovers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,7 +73,7 @@ export default function MobilePage() {
         setResult({ success: false, message: data.error || 'Ошибка' })
       }
     } catch {
-      setResult({ success: false, message: 'Неверный формат JSON' })
+      setResult({ success: false, message: 'Не удалось обработать QR-код' })
     }
   }
 

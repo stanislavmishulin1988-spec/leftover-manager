@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Leftover } from '@/lib/types'
+import { parseUniversalQR } from '@/lib/qr'
 
 type ScanResult = {
   success: boolean
@@ -46,39 +47,14 @@ export default function MobileScanPage() {
     setScanning(false)
   }
 
-  const parseQRData = (qrString: string): any => {
-    try {
-      const parsed = JSON.parse(qrString)
-      if (parsed.id && parsed.orderNumber && parsed.materialType) return parsed
-    } catch {
-      const parts = qrString.split('|')
-      if (parts.length >= 10) {
-        return {
-          id: parts[0],
-          orderNumber: parts[1],
-          materialType: parts[2],
-          materialName: parts[3],
-          color: parts[4],
-          thickness: parseFloat(parts[5]),
-          length: parseFloat(parts[6]),
-          width: parseFloat(parts[7]),
-          quantity: parseInt(parts[8], 10),
-          createdAt: parts[9],
-          comment: parts[10] || '',
-        }
-      }
-    }
-    return null
-  }
-
   const processQRCode = async (qrString: string) => {
-    const qrData = parseQRData(qrString.trim())
+    const qrData = parseUniversalQR(qrString)
 
-    if (!qrData) {
+    if (!qrString.trim()) {
       setResult({
         success: false,
-        message: 'Неверный формат QR-кода',
-        error: 'invalid_format',
+        message: 'QR-код пустой',
+        error: 'empty',
       })
       return
     }
@@ -238,7 +214,7 @@ export default function MobileScanPage() {
               Наведите камеру на QR-код
             </p>
             <p className="text-center text-xs text-gray-400 mb-4">
-              Версия сканера: camera-3
+              Версия сканера: universal-4
             </p>
 
             {!result && (

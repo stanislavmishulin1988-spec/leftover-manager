@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { qrDataSchema, filtersSchema } from '@/lib/validators'
 import { Prisma } from '@prisma/client'
+import { randomUUID } from 'crypto'
 
 // GET - получение списка остатков с фильтрами
 export async function GET(request: NextRequest) {
@@ -94,10 +95,12 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validated.data
+    const qrId = data.id?.trim() || `AUTO-${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 8)}`
+    const qrCreatedAt = data.createdAt ? new Date(data.createdAt) : new Date()
 
     // Проверка на дубль
     const existing = await prisma.leftover.findUnique({
-      where: { qrId: data.id },
+      where: { qrId },
     })
 
     if (existing) {
@@ -114,16 +117,16 @@ export async function POST(request: NextRequest) {
     // Создание остатка
     const leftover = await prisma.leftover.create({
       data: {
-        qrId: data.id,
-        orderNumber: data.orderNumber,
-        materialType: data.materialType,
-        materialName: data.materialName,
-        color: data.color,
-        thickness: data.thickness,
-        length: data.length,
-        width: data.width,
-        quantity: data.quantity,
-        qrCreatedAt: new Date(data.createdAt),
+        qrId,
+        orderNumber: data.orderNumber?.trim() || '',
+        materialType: data.materialType?.trim() || '',
+        materialName: data.materialName?.trim() || '',
+        color: data.color?.trim() || '',
+        thickness: data.thickness ?? 0,
+        length: data.length ?? 0,
+        width: data.width ?? 0,
+        quantity: data.quantity ? Math.round(data.quantity) : 0,
+        qrCreatedAt: Number.isNaN(qrCreatedAt.getTime()) ? new Date() : qrCreatedAt,
         addedBy: user.id,
         comment: data.comment,
       },

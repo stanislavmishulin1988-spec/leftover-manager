@@ -3,7 +3,18 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { qrDataSchema, filtersSchema } from '@/lib/validators'
 import { Prisma } from '@prisma/client'
-import { randomUUID } from 'crypto'
+
+async function generateNextQrId() {
+  let nextNumber = await prisma.leftover.count()
+
+  while (true) {
+    nextNumber += 1
+    const qrId = `OST-${String(nextNumber).padStart(6, '0')}`
+    const existing = await prisma.leftover.findUnique({ where: { qrId } })
+
+    if (!existing) return qrId
+  }
+}
 
 // GET - получение списка остатков с фильтрами
 export async function GET(request: NextRequest) {
@@ -29,13 +40,11 @@ export async function GET(request: NextRequest) {
         { qrId: { contains: f.search } },
         { orderNumber: { contains: f.search } },
         { materialName: { contains: f.search } },
-        { color: { contains: f.search } },
       ]
     }
 
     // Фильтры
     if (f.materialType) where.materialType = f.materialType
-    if (f.color) where.color = f.color
     if (f.thickness) where.thickness = f.thickness
     if (f.status) where.status = f.status as 'AVAILABLE' | 'RESERVED' | 'USED' | 'SCRAPPED' | 'DELETED'
     if (f.lengthMin || f.lengthMax) {
@@ -95,24 +104,8 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validated.data
-    const qrId = data.id?.trim() || `AUTO-${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 8)}`
+    const qrId = await generateNextQrId()
     const qrCreatedAt = data.createdAt ? new Date(data.createdAt) : new Date()
-
-    // Проверка на дубль
-    const existing = await prisma.leftover.findUnique({
-      where: { qrId },
-    })
-
-    if (existing) {
-      return NextResponse.json(
-        {
-          error: 'duplicate',
-          message: 'Этот QR-код уже есть в базе',
-          leftover: existing,
-        },
-        { status: 409 }
-      )
-    }
 
     // Создание остатка
     const leftover = await prisma.leftover.create({
@@ -121,7 +114,7 @@ export async function POST(request: NextRequest) {
         orderNumber: data.orderNumber?.trim() || '',
         materialType: data.materialType?.trim() || '',
         materialName: data.materialName?.trim() || '',
-        color: data.color?.trim() || '',
+        color: '',
         thickness: data.thickness ?? 0,
         length: data.length ?? 0,
         width: data.width ?? 0,

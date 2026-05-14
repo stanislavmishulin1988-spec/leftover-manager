@@ -13,11 +13,9 @@ export default function AddPage() {
   const [success, setSuccess] = useState<Leftover | null>(null)
 
   const [formData, setFormData] = useState({
-    qrId: '',
     orderNumber: '',
-    materialType: 'ЛДСП',
+    materialType: '',
     materialName: '',
-    color: '',
     thickness: '',
     length: '',
     width: '',
@@ -41,7 +39,7 @@ export default function AddPage() {
     setLoading(true)
 
     // Валидация
-    const requiredFields = ['qrId', 'orderNumber', 'materialType', 'materialName', 'color', 'thickness', 'length', 'width', 'quantity']
+    const requiredFields = ['orderNumber', 'materialName', 'thickness', 'length', 'width', 'quantity']
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData])
 
     if (missingFields.length > 0) {
@@ -55,11 +53,9 @@ export default function AddPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: formData.qrId,
           orderNumber: formData.orderNumber,
           materialType: formData.materialType,
           materialName: formData.materialName,
-          color: formData.color,
           thickness: parseFloat(formData.thickness),
           length: parseFloat(formData.length),
           width: parseFloat(formData.width),
@@ -75,11 +71,9 @@ export default function AddPage() {
         setSuccess(data.leftover)
         // Очистка формы
         setFormData({
-          qrId: '',
           orderNumber: '',
-          materialType: 'ЛДСП',
+          materialType: '',
           materialName: '',
-          color: '',
           thickness: '',
           length: '',
           width: '',
@@ -87,8 +81,6 @@ export default function AddPage() {
           qrCreatedAt: new Date().toISOString().split('T')[0],
           comment: '',
         })
-      } else if (data.error === 'duplicate') {
-        setError('Такой ID уже существует в базе')
       } else {
         setError(data.error || 'Ошибка добавления')
       }
@@ -171,22 +163,6 @@ export default function AddPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* ID остатка */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    ID остатка *
-                  </label>
-                  <input
-                    type="text"
-                    name="qrId"
-                    value={formData.qrId}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="OST-2026-000001"
-                    required
-                  />
-                </div>
-
                 {/* Номер заказа */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -206,7 +182,7 @@ export default function AddPage() {
                 {/* Вид материала */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Вид материала *
+                    Вид материала
                   </label>
                   <select
                     name="materialType"
@@ -214,6 +190,7 @@ export default function AddPage() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                   >
+                    <option value="">Не указан</option>
                     {materialTypes.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -232,22 +209,6 @@ export default function AddPage() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
                     placeholder="Egger U708"
-                    required
-                  />
-                </div>
-
-                {/* Цвет */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Цвет *
-                  </label>
-                  <input
-                    type="text"
-                    name="color"
-                    value={formData.color}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="Светло-серый"
                     required
                   />
                 </div>

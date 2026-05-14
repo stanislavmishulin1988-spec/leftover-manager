@@ -214,12 +214,6 @@ export default function LeftoverDetailPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Цвет
-                    </h3>
-                    <p className="text-gray-800 dark:text-white">{leftover.color}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                       Толщина
                     </h3>
                     <p className="text-gray-800 dark:text-white">{leftover.thickness || '—'} мм</p>

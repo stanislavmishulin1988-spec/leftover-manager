@@ -14,11 +14,9 @@ export default function MobilePage() {
   const [result, setResult] = useState<{ success: boolean; message: string; leftover?: Leftover } | null>(null)
 
   const [formData, setFormData] = useState({
-    qrId: '',
     orderNumber: '',
-    materialType: 'ЛДСП',
+    materialType: '',
     materialName: '',
-    color: '',
     thickness: '',
     length: '',
     width: '',
@@ -86,11 +84,9 @@ export default function MobilePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: formData.qrId,
           orderNumber: formData.orderNumber,
           materialType: formData.materialType,
           materialName: formData.materialName,
-          color: formData.color,
           thickness: parseFloat(formData.thickness),
           length: parseFloat(formData.length),
           width: parseFloat(formData.width),
@@ -105,12 +101,10 @@ export default function MobilePage() {
         setResult({ success: true, message: 'Остаток добавлен!', leftover: data.leftover })
         setShowManualForm(false)
         setFormData({
-          qrId: '', orderNumber: '', materialType: 'ЛДСП', materialName: '',
-          color: '', thickness: '', length: '', width: '', quantity: '1',
+          orderNumber: '', materialType: '', materialName: '',
+          thickness: '', length: '', width: '', quantity: '1',
           qrCreatedAt: new Date().toISOString().split('T')[0], comment: '',
         })
-      } else if (data.error === 'duplicate') {
-        setResult({ success: false, message: 'Такой ID уже есть', leftover: data.leftover })
       } else {
         setResult({ success: false, message: data.error || 'Ошибка добавления' })
       }
@@ -208,18 +202,6 @@ export default function MobilePage() {
             <h2 className="text-xl font-bold text-gray-800 mb-4">Ручное добавление</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ID *</label>
-              <input
-                type="text"
-                value={formData.qrId}
-                onChange={e => setFormData({ ...formData, qrId: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg text-lg"
-                placeholder="OST-2026-0001"
-                required
-              />
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Заказ *</label>
               <input
                 type="text"
@@ -232,12 +214,13 @@ export default function MobilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Материал *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Вид материала</label>
               <select
                 value={formData.materialType}
                 onChange={e => setFormData({ ...formData, materialType: e.target.value })}
                 className="w-full px-4 py-3 border rounded-lg text-lg"
               >
+                <option value="">Не указан</option>
                 <option value="ЛДСП">ЛДСП</option>
                 <option value="МДФ">МДФ</option>
                 <option value="Столешница">Столешница</option>
@@ -254,18 +237,6 @@ export default function MobilePage() {
                 onChange={e => setFormData({ ...formData, materialName: e.target.value })}
                 className="w-full px-4 py-3 border rounded-lg text-lg"
                 placeholder="Egger U708"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Цвет *</label>
-              <input
-                type="text"
-                value={formData.color}
-                onChange={e => setFormData({ ...formData, color: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg text-lg"
-                placeholder="Серый"
                 required
               />
             </div>

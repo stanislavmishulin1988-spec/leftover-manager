@@ -40,7 +40,6 @@ export default function ReportsPage() {
         'Заказ': l.orderNumber,
         'Материал': l.materialType,
         'Название': l.materialName,
-        'Цвет': l.color,
         'Толщина (мм)': l.thickness,
         'Длина (мм)': l.length,
         'Ширина (мм)': l.width,
@@ -73,7 +72,7 @@ export default function ReportsPage() {
   const exportToCSV = () => {
     try {
       const headers = [
-        'ID', 'Заказ', 'Материал', 'Название', 'Цвет',
+        'ID', 'Заказ', 'Материал', 'Название',
         'Толщина', 'Длина', 'Ширина', 'Количество',
         'Статус', 'Дата создания', 'Дата добавления', 'Добавил', 'Комментарий'
       ]
@@ -83,7 +82,6 @@ export default function ReportsPage() {
         l.orderNumber,
         l.materialType,
         l.materialName,
-        l.color,
         l.thickness,
         l.length,
         l.width,
@@ -133,9 +131,6 @@ export default function ReportsPage() {
       switch (grouping) {
         case 'materialType':
           key = leftover.materialType
-          break
-        case 'color':
-          key = leftover.color
           break
         case 'status':
           key = getStatusLabel(leftover.status as LeftoverStatus)
@@ -245,7 +240,6 @@ export default function ReportsPage() {
               >
                 <option value="">Без группировки</option>
                 <option value="materialType">По виду материала</option>
-                <option value="color">По цвету</option>
                 <option value="status">По статусу</option>
                 <option value="orderNumber">По номеру заказа</option>
               </select>

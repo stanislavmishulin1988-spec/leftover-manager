@@ -14,7 +14,6 @@ export default function LeftoversPage() {
   const [filters, setFilters] = useState<LeftoverFilters>({
     search: '',
     materialType: '',
-    color: '',
     status: undefined,
   })
 
@@ -31,7 +30,6 @@ export default function LeftoversPage() {
       const params = new URLSearchParams()
       if (filters.search) params.set('search', filters.search)
       if (filters.materialType) params.set('materialType', filters.materialType)
-      if (filters.color) params.set('color', filters.color)
       if (filters.status) params.set('status', filters.status)
       if (showDeleted) params.set('showDeleted', 'true')
 
@@ -51,7 +49,6 @@ export default function LeftoversPage() {
     setFilters({
       search: '',
       materialType: '',
-      color: '',
       status: undefined,
     })
     setShowDeleted(false)
@@ -132,19 +129,6 @@ export default function LeftoversPage() {
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Цвет
-                </label>
-                <input
-                  type="text"
-                  value={filters.color || ''}
-                  onChange={e => setFilters({ ...filters, color: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-sm"
-                  placeholder="Например, серый"
-                />
               </div>
 
               <div>
@@ -233,9 +217,9 @@ export default function LeftoversPage() {
                         <div className="font-medium">
                           {leftover.materialName || missingValue('Материал не указан')}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {leftover.color || missingValue('Цвет не указан')}
-                        </div>
+                        {!leftover.materialType && (
+                          <div className="text-xs">{missingValue('Вид не указан')}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                         {leftover.length > 0 ? leftover.length : missingValue('длина?')} ×{' '}

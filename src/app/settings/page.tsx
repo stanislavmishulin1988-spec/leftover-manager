@@ -273,8 +273,8 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
-                        {getRoleLabel(user.role)}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role as Role)}`}>
+                        {getRoleLabel(user.role as Role)}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {new Date(user.createdAt).toLocaleDateString('ru-RU')}

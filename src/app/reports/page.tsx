@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
 import { Leftover, LeftoverStatus } from '@/lib/types'
-import { saveAs } from 'xlsx'
 import * as XLSX from 'xlsx'
 
 export default function ReportsPage() {
@@ -46,7 +45,7 @@ export default function ReportsPage() {
         'Длина (мм)': l.length,
         'Ширина (мм)': l.width,
         'Количество': l.quantity,
-        'Статус': getStatusLabel(l.status),
+        'Статус': getStatusLabel(l.status as LeftoverStatus),
         'Дата создания': new Date(l.qrCreatedAt).toLocaleDateString('ru-RU'),
         'Дата добавления': new Date(l.addedAt).toLocaleDateString('ru-RU'),
         'Добавил': l.addedByUser?.name || '',
@@ -89,7 +88,7 @@ export default function ReportsPage() {
         l.length,
         l.width,
         l.quantity,
-        getStatusLabel(l.status),
+        getStatusLabel(l.status as LeftoverStatus),
         new Date(l.qrCreatedAt).toLocaleDateString('ru-RU'),
         new Date(l.addedAt).toLocaleDateString('ru-RU'),
         l.addedByUser?.name || '',
@@ -139,7 +138,7 @@ export default function ReportsPage() {
           key = leftover.color
           break
         case 'status':
-          key = getStatusLabel(leftover.status)
+          key = getStatusLabel(leftover.status as LeftoverStatus)
           break
         case 'orderNumber':
           key = leftover.orderNumber
@@ -287,7 +286,7 @@ export default function ReportsPage() {
                                 {item.length} × {item.width} мм
                               </td>
                               <td className="px-3 py-2">
-                                <StatusBadge status={item.status} />
+                                <StatusBadge status={item.status as LeftoverStatus} />
                               </td>
                             </tr>
                           ))}
@@ -331,7 +330,7 @@ export default function ReportsPage() {
                       </td>
                       <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{item.orderNumber}</td>
                       <td className="px-3 py-2">
-                        <StatusBadge status={item.status} />
+                        <StatusBadge status={item.status as LeftoverStatus} />
                       </td>
                       <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
                         {new Date(item.addedAt).toLocaleDateString('ru-RU')}

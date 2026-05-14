@@ -231,7 +231,7 @@ export default function ScanPage() {
                           <div>
                             <span className="text-gray-500">Статус:</span>
                             <span className="ml-2">
-                              <StatusBadge status={result.leftover.status} />
+                              <StatusBadge status={result.leftover.status as LeftoverStatus} />
                             </span>
                           </div>
                         </div>
@@ -286,7 +286,7 @@ export default function ScanPage() {
                           {new Date(leftover.addedAt).toLocaleDateString('ru-RU')}
                         </p>
                       </div>
-                      <StatusBadge status={leftover.status} />
+                      <StatusBadge status={leftover.status as LeftoverStatus} />
                     </div>
                   </a>
                 ))}

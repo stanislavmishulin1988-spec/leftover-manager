@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     if (f.materialType) where.materialType = f.materialType
     if (f.color) where.color = f.color
     if (f.thickness) where.thickness = f.thickness
-    if (f.status) where.status = f.status
+    if (f.status) where.status = f.status as 'AVAILABLE' | 'RESERVED' | 'USED' | 'SCRAPPED' | 'DELETED'
     if (f.lengthMin || f.lengthMax) {
       where.length = {}
       if (f.lengthMin) where.length.gte = f.lengthMin

@@ -242,7 +242,7 @@ export default function LeftoversPage() {
                         {leftover.orderNumber}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <StatusBadge status={leftover.status} />
+                        <StatusBadge status={leftover.status as LeftoverStatus} />
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                         {new Date(leftover.addedAt).toLocaleDateString('ru-RU')}

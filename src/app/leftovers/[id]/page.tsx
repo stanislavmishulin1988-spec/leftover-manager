@@ -172,7 +172,7 @@ export default function LeftoverDetailPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => {
-                  setNewStatus(leftover.status)
+                  setNewStatus(leftover.status as LeftoverStatus)
                   setShowStatusModal(true)
                 }}
                 className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
@@ -196,7 +196,7 @@ export default function LeftoverDetailPage() {
                   <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                     Информация
                   </h2>
-                  <StatusBadge status={leftover.status} />
+                  <StatusBadge status={leftover.status as LeftoverStatus} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
@@ -408,7 +408,7 @@ export default function LeftoverDetailPage() {
                 <button
                   onClick={() => {
                     setShowStatusModal(false)
-                    setNewStatus(leftover.status)
+                    setNewStatus(leftover.status as LeftoverStatus)
                     setOrderNumber('')
                     setComment('')
                   }}

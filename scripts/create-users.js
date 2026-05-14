@@ -1,33 +1,30 @@
-// Скрипт для создания пользователей
+// Скрипт для создания SQL администратора
 // Запуск: node scripts/create-users.js
 
 const bcrypt = require('bcryptjs')
 
-function hashPassword(password) {
-  return bcrypt.hashSync(password, 10)
+const user = {
+  login: 'admin',
+  password: 'admin123',
+  role: 'ADMIN',
+  name: 'Администратор',
 }
 
-console.log('🔐 Хеш паролей для базы данных:\n')
+const hash = bcrypt.hashSync(user.password, 10)
 
-const users = [
-  { login: 'admin', password: 'admin123', role: 'ADMIN', name: 'Администратор' },
-  { login: 'operator', password: 'oper123', role: 'OPERATOR', name: 'Оператор' },
-  { login: 'master', password: 'mast123', role: 'MASTER', name: 'Мастер' },
-]
-
-users.forEach(user => {
-  const hash = hashPassword(user.password)
-  console.log(`-- ${user.name}`)
-  console.log(`INSERT INTO users (id, name, username, password, role, "createdAt", "updatedAt")`)
-  console.log(`VALUES (`)
-  console.log(`  '${user.login}-001',`)
-  console.log(`  '${user.name}',`)
-  console.log(`  '${user.login}',`)
-  console.log(`  '${hash}',`)
-  console.log(`  '${user.role}',`)
-  console.log(`  NOW(),`)
-  console.log(`  NOW()`)
-  console.log(`);\n`)
-})
-
-console.log('📋 Скопируйте SQL запросы выше и выполните в Neon SQL Editor')
+console.log('-- Администратор по умолчанию')
+console.log('INSERT INTO users (id, name, username, password, role, "createdAt", "updatedAt")')
+console.log('VALUES (')
+console.log(`  '${user.login}-001',`)
+console.log(`  '${user.name}',`)
+console.log(`  '${user.login}',`)
+console.log(`  '${hash}',`)
+console.log(`  '${user.role}',`)
+console.log('  NOW(),')
+console.log('  NOW()')
+console.log(')')
+console.log('ON CONFLICT (username) DO UPDATE SET')
+console.log('  name = EXCLUDED.name,')
+console.log('  password = EXCLUDED.password,')
+console.log('  role = EXCLUDED.role,')
+console.log('  "updatedAt" = NOW();')

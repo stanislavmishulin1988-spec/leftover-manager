@@ -182,12 +182,34 @@ export async function DELETE(
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const hardDelete = searchParams.get('hard') === 'true'
+
     const leftover = await prisma.leftover.findUnique({
       where: { id: params.id },
     })
 
     if (!leftover) {
       return NextResponse.json({ error: 'Остаток не найден' }, { status: 404 })
+    }
+
+    if (hardDelete) {
+      if (user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Нет доступа' }, { status: 403 })
+      }
+
+      if (leftover.status !== 'DELETED' && !leftover.deletedAt) {
+        return NextResponse.json(
+          { error: 'Полностью удалить можно только уже удаленный остаток' },
+          { status: 400 }
+        )
+      }
+
+      await prisma.leftover.delete({
+        where: { id: params.id },
+      })
+
+      return NextResponse.json({ success: true })
     }
 
     // Мягкое удаление - меняем статус на DELETED

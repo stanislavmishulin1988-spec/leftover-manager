@@ -106,7 +106,7 @@ export default function LeftoversPage() {
         { facingMode: 'environment' },
         {
           fps: 5,
-          qrbox: { width: 220, height: 220 },
+          qrbox: { width: 300, height: 300 },
           disableFlip: false,
         },
         async (decodedText: string) => {

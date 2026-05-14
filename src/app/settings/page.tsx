@@ -122,6 +122,7 @@ export default function SettingsPage() {
       ADMIN: 'Администратор',
       OPERATOR: 'Оператор',
       MASTER: 'Мастер',
+      MANAGER: 'Менеджер',
     }
     return labels[role as Role] ?? role
   }
@@ -131,6 +132,7 @@ export default function SettingsPage() {
       ADMIN: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       MASTER: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       OPERATOR: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      MANAGER: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
     }
     return colors[role as Role] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
   }
@@ -231,6 +233,7 @@ export default function SettingsPage() {
                     >
                       <option value="OPERATOR">Оператор</option>
                       <option value="MASTER">Мастер</option>
+                      <option value="MANAGER">Менеджер</option>
                       <option value="ADMIN">Администратор</option>
                     </select>
                   </div>
@@ -292,8 +295,8 @@ export default function SettingsPage() {
               О приложении
             </h2>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <div><strong>Версия:</strong> 1.0.0</div>
-              <div><strong>База данных:</strong> SQLite</div>
+              <div><strong>Версия:</strong> 1.0.13</div>
+              <div><strong>База данных:</strong> PostgreSQL / Neon</div>
               <div><strong>Дата сборки:</strong> {new Date().toLocaleDateString('ru-RU')}</div>
             </div>
           </div>

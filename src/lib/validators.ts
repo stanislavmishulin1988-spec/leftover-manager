@@ -41,7 +41,16 @@ export const userSchema = z.object({
   name: z.string().min(1, 'Имя обязательно'),
   username: z.string().min(3, 'Логин минимум 3 символа'),
   password: z.string().min(4, 'Пароль минимум 4 символа'),
-  role: z.string().refine(r => ['ADMIN', 'OPERATOR', 'MASTER'].includes(r), 'Неверная роль'),
+  role: z.string().refine(r => ['ADMIN', 'OPERATOR', 'MASTER', 'MANAGER'].includes(r), 'Неверная роль'),
+})
+
+export const registerSchema = z.object({
+  lastName: z.string().min(1, 'Фамилия обязательна'),
+  firstName: z.string().min(1, 'Имя обязательно'),
+  middleName: z.string().optional(),
+  username: z.string().min(3, 'Логин минимум 3 символа'),
+  password: z.string().min(4, 'Пароль минимум 4 символа'),
+  role: z.string().refine(r => ['OPERATOR', 'MASTER', 'MANAGER'].includes(r), 'Неверная должность'),
 })
 
 // Схема для изменения статуса
@@ -70,5 +79,6 @@ export const filtersSchema = z.object({
 export type QRDataInput = z.infer<typeof qrDataSchema>
 export type ManualAddInput = z.infer<typeof manualAddSchema>
 export type UserInput = z.infer<typeof userSchema>
+export type RegisterInput = z.infer<typeof registerSchema>
 export type StatusChangeInput = z.infer<typeof statusChangeSchema>
 export type FiltersInput = z.infer<typeof filtersSchema>

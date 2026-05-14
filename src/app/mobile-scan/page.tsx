@@ -213,7 +213,7 @@ export default function MobileScanPage() {
         { facingMode: 'environment' },
         {
           fps: 5,
-          qrbox: { width: 220, height: 220 },
+          qrbox: { width: 300, height: 300 },
           disableFlip: false,
         },
         async (decodedText: string) => {
@@ -253,7 +253,7 @@ export default function MobileScanPage() {
               Наведите камеру на QR-код
             </p>
             <p className="text-center text-xs text-gray-400 mb-4">
-              Версия сканера: duplicate-9
+              Версия сканера: account-12
             </p>
 
             {!result && (

@@ -11,6 +11,8 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [grouping, setGrouping] = useState<string>('')
   const [exportLoading, setExportLoading] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importMessage, setImportMessage] = useState('')
 
   useEffect(() => {
     loadLeftovers()
@@ -47,7 +49,7 @@ export default function ReportsPage() {
         'Статус': getStatusLabel(l.status as LeftoverStatus),
         'Дата создания': new Date(l.qrCreatedAt).toLocaleDateString('ru-RU'),
         'Дата добавления': new Date(l.addedAt).toLocaleDateString('ru-RU'),
-        'Добавил': l.addedByUser?.name || '',
+        'Кто добавил?': l.addedByUser?.name || '',
         'Комментарий': l.comment || '',
       }))
 
@@ -74,7 +76,7 @@ export default function ReportsPage() {
       const headers = [
         'ID', 'Заказ', 'Материал', 'Название',
         'Толщина', 'Длина', 'Ширина', 'Количество',
-        'Статус', 'Дата создания', 'Дата добавления', 'Добавил', 'Комментарий'
+        'Статус', 'Дата создания', 'Дата добавления', 'Кто добавил?', 'Комментарий'
       ]
 
       const csvData = leftovers.map(l => [
@@ -105,6 +107,37 @@ export default function ReportsPage() {
       link.click()
     } catch (error) {
       console.error('CSV export error:', error)
+    }
+  }
+
+  const importFromExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImportLoading(true)
+    setImportMessage('')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/leftovers/import', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+
+      if (res.ok) {
+        setImportMessage(`Импорт завершен: добавлено ${data.created}, пропущено ${data.skipped}`)
+        await loadLeftovers()
+      } else {
+        setImportMessage(data.error || 'Ошибка импорта')
+      }
+    } catch {
+      setImportMessage('Ошибка подключения к серверу')
+    } finally {
+      setImportLoading(false)
+      event.target.value = ''
     }
   }
 
@@ -204,12 +237,22 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Экспорт */}
+          {/* Импорт и экспорт */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-8">
             <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
-              Экспорт данных
+              Импорт и экспорт данных
             </h2>
             <div className="flex flex-wrap gap-4">
+              <label className={`px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors ${importLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                {importLoading ? 'Импорт...' : '📥 Импорт из Excel'}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={importFromExcel}
+                  disabled={importLoading}
+                  className="hidden"
+                />
+              </label>
               <button
                 onClick={exportToExcel}
                 disabled={exportLoading || leftovers.length === 0}
@@ -225,6 +268,9 @@ export default function ReportsPage() {
                 📄 Экспорт в CSV
               </button>
             </div>
+            {importMessage && (
+              <p className="mt-4 text-sm text-gray-700 dark:text-gray-300">{importMessage}</p>
+            )}
           </div>
 
           {/* Группировка */}

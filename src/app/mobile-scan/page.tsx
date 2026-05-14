@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Header from '@/components/Header'
-import StatusBadge from '@/components/StatusBadge'
 import { Leftover } from '@/lib/types'
 
 type ScanResult = {
@@ -184,16 +182,24 @@ export default function MobileScanPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
-
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-lg mx-auto">
+          <a
+            href="/mobile"
+            className="mb-4 inline-block text-sm font-medium text-primary-600 dark:text-primary-400"
+          >
+            ← Назад
+          </a>
+
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 text-center">
               Мобильное сканирование
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
               Наведите камеру на QR-код
+            </p>
+            <p className="text-center text-xs text-gray-400 mb-4">
+              Версия сканера: native-2
             </p>
 
             {!result && (
@@ -261,9 +267,7 @@ export default function MobileScanPage() {
                       </div>
                       <div>
                         <span className="text-gray-500">Статус:</span>
-                        <span className="ml-2">
-                          <StatusBadge status={result.leftover.status} />
-                        </span>
+                        <span className="ml-2 font-medium dark:text-white">{result.leftover.status}</span>
                       </div>
                     </div>
                     <a

@@ -21,7 +21,12 @@ function normalizedText(value?: string) {
   return value?.trim() || ''
 }
 
-function roundedQuantity(value?: number) {
+function isEdgeMaterial(materialType?: string) {
+  return normalizedText(materialType).toLowerCase() === 'кромка'
+}
+
+function normalizedQuantity(materialType?: string, value?: number) {
+  if (isEdgeMaterial(materialType)) return 0
   return value ? Math.round(value) : 0
 }
 
@@ -34,15 +39,20 @@ function buildDuplicateWhere(data: {
   width?: number
   quantity?: number
 }): Prisma.LeftoverWhereInput {
-  return {
+  const where: Prisma.LeftoverWhereInput = {
     orderNumber: normalizedText(data.orderNumber),
     materialType: normalizedText(data.materialType),
     materialName: normalizedText(data.materialName),
     thickness: data.thickness ?? 0,
     length: data.length ?? 0,
     width: data.width ?? 0,
-    quantity: roundedQuantity(data.quantity),
   }
+
+  if (!isEdgeMaterial(data.materialType)) {
+    where.quantity = normalizedQuantity(data.materialType, data.quantity)
+  }
+
+  return where
 }
 
 function buildQrSearchWhere(rawSearch: string): Prisma.LeftoverWhereInput | null {
@@ -55,7 +65,9 @@ function buildQrSearchWhere(rawSearch: string): Prisma.LeftoverWhereInput | null
   if (qrData.thickness !== undefined) fields.push({ thickness: qrData.thickness })
   if (qrData.length !== undefined) fields.push({ length: qrData.length })
   if (qrData.width !== undefined) fields.push({ width: qrData.width })
-  if (qrData.quantity !== undefined) fields.push({ quantity: roundedQuantity(qrData.quantity) })
+  if (!isEdgeMaterial(qrData.materialType) && qrData.quantity !== undefined) {
+    fields.push({ quantity: normalizedQuantity(qrData.materialType, qrData.quantity) })
+  }
 
   return fields.length >= 2 ? { AND: fields } : null
 }
@@ -186,7 +198,7 @@ export async function POST(request: NextRequest) {
         thickness: data.thickness ?? 0,
         length: data.length ?? 0,
         width: data.width ?? 0,
-        quantity: roundedQuantity(data.quantity),
+        quantity: normalizedQuantity(data.materialType, data.quantity),
         qrCreatedAt: Number.isNaN(qrCreatedAt.getTime()) ? new Date() : qrCreatedAt,
         addedBy: user.id,
         comment: data.comment,

@@ -70,6 +70,7 @@ const detectMaterialType = (text: string): string | undefined => {
   if (/(мдф|mdf)/i.test(text)) return 'МДФ'
   if (/(хдф|hdf)/i.test(text)) return 'ХДФ'
   if (/столеш/i.test(text)) return 'Столешница'
+  if (/стекл/i.test(text)) return 'Стекло'
   if (/кромк/i.test(text)) return 'Кромка'
   return undefined
 }

@@ -24,6 +24,7 @@ export default function MobilePage() {
     qrCreatedAt: new Date().toISOString().split('T')[0],
     comment: '',
   })
+  const isEdgeMaterial = formData.materialType === 'Кромка'
 
   useEffect(() => {
     checkAuth()
@@ -90,7 +91,7 @@ export default function MobilePage() {
           thickness: parseFloat(formData.thickness),
           length: parseFloat(formData.length),
           width: parseFloat(formData.width),
-          quantity: parseInt(formData.quantity),
+          quantity: isEdgeMaterial ? undefined : parseInt(formData.quantity),
           createdAt: formData.qrCreatedAt,
           comment: formData.comment,
         }),
@@ -217,13 +218,19 @@ export default function MobilePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Вид материала</label>
               <select
                 value={formData.materialType}
-                onChange={e => setFormData({ ...formData, materialType: e.target.value })}
+                onChange={e => setFormData({
+                  ...formData,
+                  materialType: e.target.value,
+                  ...(e.target.value === 'Кромка' ? { quantity: '' } : {}),
+                })}
                 className="w-full px-4 py-3 border rounded-lg text-lg"
               >
                 <option value="">Не указан</option>
                 <option value="ЛДСП">ЛДСП</option>
                 <option value="МДФ">МДФ</option>
+                <option value="ХДФ">ХДФ</option>
                 <option value="Столешница">Столешница</option>
+                <option value="Стекло">Стекло</option>
                 <option value="Кромка">Кромка</option>
                 <option value="Другое">Другое</option>
               </select>
@@ -277,18 +284,20 @@ export default function MobilePage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Количество *</label>
-              <input
-                type="number"
-                value={formData.quantity}
-                onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg text-lg"
-                placeholder="1"
-                min="1"
-                required
-              />
-            </div>
+            {!isEdgeMaterial && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Количество *</label>
+                <input
+                  type="number"
+                  value={formData.quantity}
+                  onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg text-lg"
+                  placeholder="1"
+                  min="1"
+                  required
+                />
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <button

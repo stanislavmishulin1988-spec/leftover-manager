@@ -21,7 +21,7 @@ export default function LeftoversPage() {
     status: undefined,
   })
 
-  const materialTypes = ['ЛДСП', 'МДФ', 'ХДФ', 'Столешница', 'Кромка', 'Фурнитура', 'Другое']
+  const materialTypes = ['ЛДСП', 'МДФ', 'ХДФ', 'Столешница', 'Стекло', 'Кромка', 'Фурнитура', 'Другое']
   const statuses: LeftoverStatus[] = ['AVAILABLE', 'RESERVED', 'USED', 'SCRAPPED', 'DELETED']
 
   useEffect(() => {
@@ -140,6 +140,7 @@ export default function LeftoversPage() {
   )
 
   const hasActiveSearch = Boolean(filters.search?.trim())
+  const isEdgeMaterial = (leftover: Leftover) => leftover.materialType === 'Кромка'
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -168,6 +169,33 @@ export default function LeftoversPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto_auto]">
+          <input
+            type="text"
+            value={filters.search || ''}
+            onChange={e => setFilters({ ...filters, search: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white"
+            placeholder="Быстрый поиск: ID, заказ, материал или вставьте QR-код"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setShowFilters(true)
+              void startQrSearch()
+            }}
+            className="px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+          >
+            Сканировать QR
+          </button>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white rounded-lg transition-colors"
+          >
+            Сбросить
+          </button>
         </div>
 
         {/* Фильтры */}
@@ -282,6 +310,9 @@ export default function LeftoversPage() {
                     ID
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Заказ
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Материал
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -289,9 +320,6 @@ export default function LeftoversPage() {
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Кол-во
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Заказ
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Статус
@@ -329,6 +357,9 @@ export default function LeftoversPage() {
                         {leftover.qrId}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                        {leftover.orderNumber || missingValue('Заказ не указан')}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                         <div className="font-medium">
                           {leftover.materialName || missingValue('Материал не указан')}
                         </div>
@@ -344,10 +375,11 @@ export default function LeftoversPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {leftover.quantity > 0 ? `${leftover.quantity} шт.` : missingValue('Кол-во не указано')}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                        {leftover.orderNumber || missingValue('Заказ не указан')}
+                        {isEdgeMaterial(leftover)
+                          ? <span className="text-gray-500">Пог. материал</span>
+                          : leftover.quantity > 0
+                            ? `${leftover.quantity} шт.`
+                            : missingValue('Кол-во не указано')}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <StatusBadge status={leftover.status as LeftoverStatus} />

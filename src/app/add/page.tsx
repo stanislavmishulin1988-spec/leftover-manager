@@ -24,12 +24,14 @@ export default function AddPage() {
     comment: '',
   })
 
-  const materialTypes = ['ЛДСП', 'МДФ', 'Столешница', 'Кромка', 'Фурнитура', 'Другое']
+  const materialTypes = ['ЛДСП', 'МДФ', 'ХДФ', 'Столешница', 'Стекло', 'Кромка', 'Фурнитура', 'Другое']
+  const isEdgeMaterial = formData.materialType === 'Кромка'
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value,
+      ...(e.target.name === 'materialType' && e.target.value === 'Кромка' ? { quantity: '' } : {}),
     }))
   }
 
@@ -39,7 +41,8 @@ export default function AddPage() {
     setLoading(true)
 
     // Валидация
-    const requiredFields = ['orderNumber', 'materialName', 'thickness', 'length', 'width', 'quantity']
+    const requiredFields = ['orderNumber', 'materialName', 'thickness', 'length', 'width']
+    if (!isEdgeMaterial) requiredFields.push('quantity')
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData])
 
     if (missingFields.length > 0) {
@@ -59,7 +62,7 @@ export default function AddPage() {
           thickness: parseFloat(formData.thickness),
           length: parseFloat(formData.length),
           width: parseFloat(formData.width),
-          quantity: parseInt(formData.quantity),
+          quantity: isEdgeMaterial ? undefined : parseInt(formData.quantity),
           createdAt: formData.qrCreatedAt,
           comment: formData.comment,
         }),
@@ -263,21 +266,23 @@ export default function AddPage() {
                 </div>
 
                 {/* Количество */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Количество *
-                  </label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="1"
-                    min="1"
-                    required
-                  />
-                </div>
+                {!isEdgeMaterial && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Количество *
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={formData.quantity}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      placeholder="1"
+                      min="1"
+                      required
+                    />
+                  </div>
+                )}
 
                 {/* Дата создания */}
                 <div>

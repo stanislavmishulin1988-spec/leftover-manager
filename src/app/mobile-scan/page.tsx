@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Html5Qrcode } from 'html5-qrcode'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
 import { Leftover, LeftoverStatus } from '@/lib/types'
@@ -19,15 +18,31 @@ export default function MobileScanPage() {
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([])
   const [selectedCamera, setSelectedCamera] = useState('')
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const scannerRef = useRef<Html5Qrcode | null>(null)
+  const scannerRef = useRef<any>(null)
+
+  const getHtml5Qrcode = async () => {
+    const module = await import('html5-qrcode')
+    return module.Html5Qrcode
+  }
 
   // Запрос разрешения на камеру
   useEffect(() => {
     requestCameraPermission()
+
+    return () => {
+      scannerRef.current?.stop?.().catch(() => {})
+      scannerRef.current = null
+    }
   }, [])
 
   const requestCameraPermission = async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setHasPermission(false)
+        setCameraError('Браузер не поддерживает доступ к камере. Откройте ссылку в Safari или Chrome.')
+        return
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' } // Тыловая камера
       })
@@ -47,6 +62,7 @@ export default function MobileScanPage() {
 
   const loadCameras = async () => {
     try {
+      const Html5Qrcode = await getHtml5Qrcode()
       const cameras = await Html5Qrcode.getCameras()
       console.log('Available cameras:', cameras)
 
@@ -92,6 +108,7 @@ export default function MobileScanPage() {
         scannerRef.current = null
       }
 
+      const Html5Qrcode = await getHtml5Qrcode()
       const scanner = new Html5Qrcode('reader')
       scannerRef.current = scanner
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Leftover } from '@/lib/types'
 import { parseUniversalQR } from '@/lib/qr'
+import Header from '@/components/Header'
 
 type ScanResult = {
   success: boolean
@@ -241,15 +242,9 @@ export default function MobileScanPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-lg mx-auto">
-          <a
-            href="/mobile"
-            className="mb-4 inline-block text-sm font-medium text-primary-600 dark:text-primary-400"
-          >
-            ← Назад
-          </a>
-
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 text-center">
               Мобильное сканирование
@@ -258,7 +253,7 @@ export default function MobileScanPage() {
               Наведите камеру на QR-код
             </p>
             <p className="text-center text-xs text-gray-400 mb-4">
-              Версия сканера: caret-8
+              Версия сканера: duplicate-9
             </p>
 
             {!result && (

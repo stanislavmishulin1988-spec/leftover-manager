@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
 import { Leftover, LeftoverFilters, LeftoverStatus } from '@/lib/types'
@@ -10,6 +10,10 @@ export default function LeftoversPage() {
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
+  const [qrSearchOpen, setQrSearchOpen] = useState(false)
+  const [qrSearchScanning, setQrSearchScanning] = useState(false)
+  const [qrSearchError, setQrSearchError] = useState('')
+  const qrScannerRef = useRef<any>(null)
 
   const [filters, setFilters] = useState<LeftoverFilters>({
     search: '',
@@ -17,12 +21,18 @@ export default function LeftoversPage() {
     status: undefined,
   })
 
-  const materialTypes = ['ЛДСП', 'МДФ', 'Столешница', 'Кромка', 'Фурнитура', 'Другое']
+  const materialTypes = ['ЛДСП', 'МДФ', 'ХДФ', 'Столешница', 'Кромка', 'Фурнитура', 'Другое']
   const statuses: LeftoverStatus[] = ['AVAILABLE', 'RESERVED', 'USED', 'SCRAPPED', 'DELETED']
 
   useEffect(() => {
     loadLeftovers()
   }, [filters, showDeleted])
+
+  useEffect(() => {
+    return () => {
+      void stopQrSearch()
+    }
+  }, [])
 
   const loadLeftovers = async () => {
     setLoading(true)
@@ -54,6 +64,66 @@ export default function LeftoversPage() {
     setShowDeleted(false)
   }
 
+  const stopQrSearch = async () => {
+    const scanner = qrScannerRef.current
+    qrScannerRef.current = null
+    setQrSearchScanning(false)
+
+    try {
+      if (scanner?.isScanning) {
+        await scanner.stop()
+      } else {
+        await scanner?.stop?.()
+      }
+    } catch {
+      // Scanner may already be stopped.
+    }
+
+    try {
+      await scanner?.clear?.()
+    } catch {
+      // Reader may already be cleared.
+    }
+  }
+
+  const startQrSearch = async () => {
+    setQrSearchOpen(true)
+    setQrSearchError('')
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setQrSearchError('Этот браузер не дал доступ к камере. Вставьте QR-код в поле поиска вручную.')
+      return
+    }
+
+    try {
+      await stopQrSearch()
+      const module = await import('html5-qrcode')
+      const scanner = new module.Html5Qrcode('leftovers-qr-search-reader')
+      qrScannerRef.current = scanner
+      setQrSearchScanning(true)
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 5,
+          qrbox: { width: 220, height: 220 },
+          disableFlip: false,
+        },
+        async (decodedText: string) => {
+          setFilters(current => ({ ...current, search: decodedText }))
+          setShowFilters(true)
+          setQrSearchOpen(false)
+          await stopQrSearch()
+        },
+        () => {}
+      )
+    } catch (error: any) {
+      console.error('QR search scanner error:', error)
+      setQrSearchError(error?.message || 'Не удалось запустить камеру для поиска.')
+      await stopQrSearch()
+    }
+  }
+
   const getStatusLabel = (status: LeftoverStatus) => {
     const labels: Record<LeftoverStatus, string> = {
       AVAILABLE: 'В наличии',
@@ -68,6 +138,8 @@ export default function LeftoversPage() {
   const missingValue = (label = 'Не указано') => (
     <span className="font-medium text-red-600 dark:text-red-400">{label}</span>
   )
+
+  const hasActiveSearch = Boolean(filters.search?.trim())
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -117,6 +189,19 @@ export default function LeftoversPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Поиск по QR-коду
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void startQrSearch()}
+                  className="w-full px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                >
+                  Сканировать QR для поиска
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Вид материала
                 </label>
                 <select
@@ -149,6 +234,32 @@ export default function LeftoversPage() {
                 </select>
               </div>
             </div>
+
+            {qrSearchOpen && (
+              <div className="mt-5 border-t border-gray-200 dark:border-gray-700 pt-5">
+                <div className="mx-auto max-w-sm">
+                  <div
+                    id="leftovers-qr-search-reader"
+                    className="min-h-[260px] overflow-hidden rounded-xl bg-black"
+                  />
+                  {qrSearchError && (
+                    <div className="mt-3 rounded-lg bg-red-100 p-3 text-center text-sm text-red-700 dark:bg-red-900 dark:text-red-200">
+                      {qrSearchError}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQrSearchOpen(false)
+                      void stopQrSearch()
+                    }}
+                    className="mt-3 w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg transition-colors text-sm"
+                  >
+                    Закрыть сканер
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-4 flex justify-end">
               <button
@@ -207,7 +318,11 @@ export default function LeftoversPage() {
                   leftovers.map(leftover => (
                     <tr
                       key={leftover.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      className={`cursor-pointer ${
+                        hasActiveSearch
+                          ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/40'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
                       onClick={() => window.location.href = `/leftovers/${leftover.id}`}
                     >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { qrDataSchema, filtersSchema } from '@/lib/validators'
 import { Prisma } from '@prisma/client'
+import { parseUniversalQR } from '@/lib/qr'
 
 async function generateNextQrId() {
   let nextNumber = await prisma.leftover.count()
@@ -14,6 +15,49 @@ async function generateNextQrId() {
 
     if (!existing) return qrId
   }
+}
+
+function normalizedText(value?: string) {
+  return value?.trim() || ''
+}
+
+function roundedQuantity(value?: number) {
+  return value ? Math.round(value) : 0
+}
+
+function buildDuplicateWhere(data: {
+  orderNumber?: string
+  materialType?: string
+  materialName?: string
+  thickness?: number
+  length?: number
+  width?: number
+  quantity?: number
+}): Prisma.LeftoverWhereInput {
+  return {
+    orderNumber: normalizedText(data.orderNumber),
+    materialType: normalizedText(data.materialType),
+    materialName: normalizedText(data.materialName),
+    thickness: data.thickness ?? 0,
+    length: data.length ?? 0,
+    width: data.width ?? 0,
+    quantity: roundedQuantity(data.quantity),
+  }
+}
+
+function buildQrSearchWhere(rawSearch: string): Prisma.LeftoverWhereInput | null {
+  const qrData = parseUniversalQR(rawSearch)
+  const fields: Prisma.LeftoverWhereInput[] = []
+
+  if (qrData.orderNumber) fields.push({ orderNumber: normalizedText(qrData.orderNumber) })
+  if (qrData.materialType) fields.push({ materialType: normalizedText(qrData.materialType) })
+  if (qrData.materialName) fields.push({ materialName: normalizedText(qrData.materialName) })
+  if (qrData.thickness !== undefined) fields.push({ thickness: qrData.thickness })
+  if (qrData.length !== undefined) fields.push({ length: qrData.length })
+  if (qrData.width !== undefined) fields.push({ width: qrData.width })
+  if (qrData.quantity !== undefined) fields.push({ quantity: roundedQuantity(qrData.quantity) })
+
+  return fields.length >= 2 ? { AND: fields } : null
 }
 
 // GET - получение списка остатков с фильтрами
@@ -36,11 +80,16 @@ export async function GET(request: NextRequest) {
 
     // Поиск по тексту
     if (f.search) {
+      const qrSearchWhere = buildQrSearchWhere(f.search)
       where.OR = [
         { qrId: { contains: f.search } },
         { orderNumber: { contains: f.search } },
         { materialName: { contains: f.search } },
       ]
+
+      if (qrSearchWhere) {
+        where.OR.push(qrSearchWhere)
+      }
     }
 
     // Фильтры
@@ -106,19 +155,38 @@ export async function POST(request: NextRequest) {
     const data = validated.data
     const qrId = await generateNextQrId()
     const qrCreatedAt = data.createdAt ? new Date(data.createdAt) : new Date()
+    const duplicateWhere = buildDuplicateWhere(data)
+
+    const existingLeftover = await prisma.leftover.findFirst({
+      where: duplicateWhere,
+      include: {
+        addedByUser: { select: { id: true, name: true, username: true, role: true } },
+      },
+    })
+
+    if (existingLeftover) {
+      return NextResponse.json(
+        {
+          error: 'duplicate',
+          message: 'Остаток с такими же параметрами уже есть в базе',
+          leftover: existingLeftover,
+        },
+        { status: 409 }
+      )
+    }
 
     // Создание остатка
     const leftover = await prisma.leftover.create({
       data: {
         qrId,
-        orderNumber: data.orderNumber?.trim() || '',
-        materialType: data.materialType?.trim() || '',
-        materialName: data.materialName?.trim() || '',
+        orderNumber: normalizedText(data.orderNumber),
+        materialType: normalizedText(data.materialType),
+        materialName: normalizedText(data.materialName),
         color: '',
         thickness: data.thickness ?? 0,
         length: data.length ?? 0,
         width: data.width ?? 0,
-        quantity: data.quantity ? Math.round(data.quantity) : 0,
+        quantity: roundedQuantity(data.quantity),
         qrCreatedAt: Number.isNaN(qrCreatedAt.getTime()) ? new Date() : qrCreatedAt,
         addedBy: user.id,
         comment: data.comment,

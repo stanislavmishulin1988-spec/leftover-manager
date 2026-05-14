@@ -141,6 +141,9 @@ export function parseUniversalQR(qrString: string): ParsedQRData {
     const parsedCaret = parseCaretFormat(raw, data)
     if (parsedCaret) {
       parseDimensions(raw, data)
+      if (!data.comment && raw.length <= 500) {
+        data.comment = `Исходный QR: ${raw}`
+      }
       return data
     }
 

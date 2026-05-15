@@ -52,7 +52,7 @@ export default function Header() {
               Учет остатков
             </span>
             <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              v1.0.13
+              v1.0.14
             </span>
           </Link>
 

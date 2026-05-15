@@ -13,6 +13,14 @@ export default function ReportsPage() {
   const [exportLoading, setExportLoading] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [importMessage, setImportMessage] = useState('')
+  const [filters, setFilters] = useState({
+    materialType: '',
+    materialName: '',
+    color: '',
+    thickness: '',
+    orderNumber: '',
+    status: '',
+  })
 
   useEffect(() => {
     loadLeftovers()
@@ -37,7 +45,7 @@ export default function ReportsPage() {
     setExportLoading(true)
     try {
       // Подготовка данных для экспорта
-      const exportData = leftovers.map(l => ({
+      const exportData = filteredLeftovers.map(l => ({
         'ID': l.qrId,
         'Заказ': l.orderNumber,
         'Материал': l.materialType,
@@ -79,7 +87,7 @@ export default function ReportsPage() {
         'Статус', 'Дата создания', 'Дата добавления', 'Кто добавил?', 'Комментарий'
       ]
 
-      const csvData = leftovers.map(l => [
+      const csvData = filteredLeftovers.map(l => [
         l.qrId,
         l.orderNumber,
         l.materialType,
@@ -152,13 +160,46 @@ export default function ReportsPage() {
     return labels[status as LeftoverStatus] ?? status
   }
 
+  const filteredLeftovers = leftovers.filter(leftover => {
+    const materialName = leftover.materialName.toLowerCase()
+    const color = leftover.color.toLowerCase()
+    const materialTypeMatches = !filters.materialType || leftover.materialType === filters.materialType
+    const materialNameMatches = !filters.materialName || materialName.includes(filters.materialName.toLowerCase())
+    const colorMatches =
+      !filters.color ||
+      color.includes(filters.color.toLowerCase()) ||
+      materialName.includes(filters.color.toLowerCase())
+    const thicknessMatches = !filters.thickness || leftover.thickness === Number(filters.thickness)
+    const orderMatches = !filters.orderNumber || leftover.orderNumber.toLowerCase().includes(filters.orderNumber.toLowerCase())
+    const statusMatches = !filters.status || leftover.status === filters.status
+
+    return materialTypeMatches && materialNameMatches && colorMatches && thicknessMatches && orderMatches && statusMatches
+  })
+
+  const resetFilters = () => {
+    setFilters({
+      materialType: '',
+      materialName: '',
+      color: '',
+      thickness: '',
+      orderNumber: '',
+      status: '',
+    })
+  }
+
+  const unitCount = (leftover: Leftover) => leftover.quantity > 0 ? leftover.quantity : 1
+  const areaInSquareMeters = (leftover: Leftover) =>
+    (leftover.length * leftover.width * unitCount(leftover)) / 1000000
+  const lengthInMeters = (leftover: Leftover) =>
+    (leftover.length * unitCount(leftover)) / 1000
+
   // Группировка данных
   const getGroupedData = () => {
     if (!grouping) return null
 
     const groups: Record<string, Leftover[]> = {}
 
-    leftovers.forEach(leftover => {
+    filteredLeftovers.forEach(leftover => {
       let key: string
 
       switch (grouping) {
@@ -186,13 +227,27 @@ export default function ReportsPage() {
 
   // Статистика
   const stats = {
-    total: leftovers.length,
-    available: leftovers.filter(l => l.status === 'AVAILABLE').length,
-    reserved: leftovers.filter(l => l.status === 'RESERVED').length,
-    used: leftovers.filter(l => l.status === 'USED').length,
-    scrapped: leftovers.filter(l => l.status === 'SCRAPPED' || l.status === 'DELETED').length,
-    totalArea: leftovers.reduce((sum, l) => sum + (l.length * l.width * l.quantity), 0) / 1000000, // м²
+    total: filteredLeftovers.length,
+    available: filteredLeftovers.filter(l => l.status === 'AVAILABLE').length,
+    reserved: filteredLeftovers.filter(l => l.status === 'RESERVED').length,
+    used: filteredLeftovers.filter(l => l.status === 'USED').length,
+    scrapped: filteredLeftovers.filter(l => l.status === 'SCRAPPED' || l.status === 'DELETED').length,
   }
+
+  const materialSummary = ['ЛДСП', 'МДФ', 'ХДФ', 'Стекло'].map(materialType => ({
+    materialType,
+    amount: filteredLeftovers
+      .filter(leftover => leftover.materialType === materialType)
+      .reduce((sum, leftover) => sum + areaInSquareMeters(leftover), 0),
+  }))
+
+  const countertopLength = filteredLeftovers
+    .filter(leftover => leftover.materialType === 'Столешница')
+    .reduce((sum, leftover) => sum + lengthInMeters(leftover), 0)
+
+  const edgeLength = filteredLeftovers
+    .filter(leftover => leftover.materialType === 'Кромка')
+    .reduce((sum, leftover) => sum + lengthInMeters(leftover), 0)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -202,6 +257,78 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
             📊 Отчеты и группировки
           </h1>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+                  Фильтры отчета
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Все показатели ниже считаются по выбранным условиям
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white rounded-lg transition-colors"
+              >
+                Сбросить фильтры
+              </button>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <select
+                value={filters.materialType}
+                onChange={e => setFilters({ ...filters, materialType: e.target.value })}
+                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Все виды материалов</option>
+                <option value="ЛДСП">ЛДСП</option>
+                <option value="МДФ">МДФ</option>
+                <option value="ХДФ">ХДФ</option>
+                <option value="Стекло">Стекло</option>
+                <option value="Столешница">Столешница</option>
+                <option value="Кромка">Кромка</option>
+              </select>
+              <input
+                value={filters.materialName}
+                onChange={e => setFilters({ ...filters, materialName: e.target.value })}
+                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                placeholder="Наименование материала"
+              />
+              <input
+                value={filters.color}
+                onChange={e => setFilters({ ...filters, color: e.target.value })}
+                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                placeholder="Цвет / декор"
+              />
+              <input
+                type="number"
+                value={filters.thickness}
+                onChange={e => setFilters({ ...filters, thickness: e.target.value })}
+                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                placeholder="Толщина, мм"
+              />
+              <input
+                value={filters.orderNumber}
+                onChange={e => setFilters({ ...filters, orderNumber: e.target.value })}
+                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                placeholder="Номер заказа"
+              />
+              <select
+                value={filters.status}
+                onChange={e => setFilters({ ...filters, status: e.target.value })}
+                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Все статусы</option>
+                <option value="AVAILABLE">В наличии</option>
+                <option value="RESERVED">Зарезервирован</option>
+                <option value="USED">Использован</option>
+                <option value="SCRAPPED">Списан</option>
+                <option value="DELETED">Удален</option>
+              </select>
+            </div>
+          </div>
 
           {/* Статистика */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -255,14 +382,14 @@ export default function ReportsPage() {
               </label>
               <button
                 onClick={exportToExcel}
-                disabled={exportLoading || leftovers.length === 0}
+                disabled={exportLoading || filteredLeftovers.length === 0}
                 className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {exportLoading ? 'Экспорт...' : '📄 Экспорт в Excel'}
               </button>
               <button
                 onClick={exportToCSV}
-                disabled={leftovers.length === 0}
+                disabled={filteredLeftovers.length === 0}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 📄 Экспорт в CSV
@@ -271,6 +398,34 @@ export default function ReportsPage() {
             {importMessage && (
               <p className="mt-4 text-sm text-gray-700 dark:text-gray-300">{importMessage}</p>
             )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-8">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
+              Производственные показатели
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {materialSummary.map(item => (
+                <div key={item.materialType} className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{item.materialType}</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {item.amount.toFixed(2)} м²
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Столешница</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {countertopLength.toFixed(2)} м
+                </div>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Кромка</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {edgeLength.toFixed(2)} м
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Группировка */}
@@ -346,7 +501,7 @@ export default function ReportsPage() {
           {/* Все остатки */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
             <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
-              Все остатки ({leftovers.length})
+              Все остатки ({filteredLeftovers.length})
             </h2>
             <div className="table-responsive">
               <table className="min-w-full text-sm">
@@ -361,7 +516,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leftovers.map(item => (
+                  {filteredLeftovers.map(item => (
                     <tr key={item.id} className="border-t border-gray-200 dark:border-gray-600">
                       <td className="px-3 py-2 text-gray-800 dark:text-white">{item.qrId}</td>
                       <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{item.materialName}</td>

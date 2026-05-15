@@ -298,7 +298,7 @@ export default function SettingsPage() {
               О приложении
             </h2>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <div><strong>Версия:</strong> 1.0.17</div>
+              <div><strong>Версия:</strong> 1.0.18</div>
               <div><strong>База данных:</strong> PostgreSQL / Neon</div>
               <div><strong>Дата сборки:</strong> {new Date().toLocaleDateString('ru-RU')}</div>
             </div>

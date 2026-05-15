@@ -37,7 +37,9 @@ export async function PUT(request: NextRequest) {
             where: { id: leftover.id },
             data: {
               status: data.status,
-              ...(data.status === 'DELETED' ? { deletedAt: new Date(), deletedBy: user.id } : {}),
+              ...(data.status === 'DELETED'
+                ? { deletedAt: new Date(), deletedBy: user.id }
+                : { deletedAt: null, deletedBy: null }),
             },
           }),
           prisma.history.create({

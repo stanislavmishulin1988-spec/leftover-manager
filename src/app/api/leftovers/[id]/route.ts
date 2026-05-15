@@ -84,6 +84,10 @@ export async function PUT(
     // Изменение статуса
     if (status && status !== leftover.status) {
       updateData.status = status
+      if (status !== 'DELETED') {
+        updateData.deletedAt = null
+        updateData.deletedBy = null
+      }
       historyEntries.push({
         leftoverId: params.id,
         actionType: 'UPDATE_STATUS',

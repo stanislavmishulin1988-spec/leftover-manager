@@ -60,6 +60,20 @@ export const statusChangeSchema = z.object({
   orderNumber: z.string().optional(),
 })
 
+export const bulkLeftoverSchema = z.object({
+  ids: z.array(z.string()).min(1),
+  action: z.enum(['status', 'delete', 'update']),
+  status: z.string().optional(),
+  orderNumber: z.string().optional(),
+  materialType: z.string().optional(),
+  materialName: z.string().optional(),
+  thickness: optionalNumber,
+  length: optionalNumber,
+  width: optionalNumber,
+  quantity: optionalNumber,
+  comment: z.string().optional(),
+})
+
 // Схема для фильтров
 export const filtersSchema = z.object({
   search: z.string().optional(),
@@ -81,4 +95,5 @@ export type ManualAddInput = z.infer<typeof manualAddSchema>
 export type UserInput = z.infer<typeof userSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
 export type StatusChangeInput = z.infer<typeof statusChangeSchema>
+export type BulkLeftoverInput = z.infer<typeof bulkLeftoverSchema>
 export type FiltersInput = z.infer<typeof filtersSchema>

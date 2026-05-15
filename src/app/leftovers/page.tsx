@@ -13,6 +13,20 @@ export default function LeftoversPage() {
   const [qrSearchOpen, setQrSearchOpen] = useState(false)
   const [qrSearchScanning, setQrSearchScanning] = useState(false)
   const [qrSearchError, setQrSearchError] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkLoading, setBulkLoading] = useState(false)
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
+  const [bulkStatus, setBulkStatus] = useState<LeftoverStatus>('AVAILABLE')
+  const [bulkEdit, setBulkEdit] = useState({
+    orderNumber: '',
+    materialType: '',
+    materialName: '',
+    thickness: '',
+    length: '',
+    width: '',
+    quantity: '',
+    comment: '',
+  })
   const qrScannerRef = useRef<any>(null)
 
   const [filters, setFilters] = useState<LeftoverFilters>({
@@ -47,6 +61,7 @@ export default function LeftoversPage() {
       if (res.ok) {
         const data = await res.json()
         setLeftovers(data.leftovers)
+        setSelectedIds(current => current.filter(id => data.leftovers.some((item: Leftover) => item.id === id)))
       }
     } catch (error) {
       console.error('Error loading leftovers:', error)
@@ -141,6 +156,42 @@ export default function LeftoversPage() {
 
   const hasActiveSearch = Boolean(filters.search?.trim())
   const isEdgeMaterial = (leftover: Leftover) => leftover.materialType === 'Кромка'
+  const allVisibleSelected = leftovers.length > 0 && selectedIds.length === leftovers.length
+
+  const toggleAll = () => {
+    setSelectedIds(allVisibleSelected ? [] : leftovers.map(leftover => leftover.id))
+  }
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
+  }
+
+  const runBulkAction = async (payload: Record<string, unknown>) => {
+    if (selectedIds.length === 0) return
+    setBulkLoading(true)
+
+    try {
+      const res = await fetch('/api/leftovers/bulk', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds, ...payload }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data.error || 'Ошибка массовой операции')
+        return
+      }
+
+      setSelectedIds([])
+      setShowBulkEdit(false)
+      await loadLeftovers()
+    } catch {
+      alert('Ошибка подключения к серверу')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -197,6 +248,54 @@ export default function LeftoversPage() {
             Сбросить
           </button>
         </div>
+
+        {selectedIds.length > 0 && (
+          <div className="mb-6 rounded-xl bg-white p-4 shadow-lg dark:bg-gray-800">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Выбрано: {selectedIds.length}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <select
+                  value={bulkStatus}
+                  onChange={e => setBulkStatus(e.target.value as LeftoverStatus)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                >
+                  {statuses.map(status => (
+                    <option key={status} value={status}>{getStatusLabel(status)}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={() => void runBulkAction({ action: 'status', status: bulkStatus })}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg disabled:opacity-50"
+                >
+                  Изменить статус
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkEdit(true)}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg"
+                >
+                  Редактировать
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={() => {
+                    if (window.confirm(`Удалить выбранные остатки: ${selectedIds.length}?`)) {
+                      void runBulkAction({ action: 'delete' })
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
+                >
+                  Удалить
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Фильтры */}
         {showFilters && (
@@ -306,6 +405,14 @@ export default function LeftoversPage() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
+                  <th className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAll}
+                      className="rounded border-gray-300 dark:border-gray-600"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     ID
                   </th>
@@ -332,13 +439,13 @@ export default function LeftoversPage() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       Загрузка...
                     </td>
                   </tr>
                 ) : leftovers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       Остатки не найдены
                     </td>
                   </tr>
@@ -353,6 +460,17 @@ export default function LeftoversPage() {
                       }`}
                       onClick={() => window.location.href = `/leftovers/${leftover.id}`}
                     >
+                      <td
+                        className="px-4 py-3"
+                        onClick={event => event.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(leftover.id)}
+                          onChange={() => toggleSelected(leftover.id)}
+                          className="rounded border-gray-300 dark:border-gray-600"
+                        />
+                      </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                         {leftover.qrId}
                       </td>
@@ -399,6 +517,51 @@ export default function LeftoversPage() {
         {!loading && leftovers.length > 0 && (
           <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
             Найдено: {leftovers.length} остатков
+          </div>
+        )}
+
+        {showBulkEdit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Массовое редактирование
+              </h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Заполните только те поля, которые нужно изменить у всех выбранных записей.
+              </p>
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <input value={bulkEdit.orderNumber} onChange={e => setBulkEdit({ ...bulkEdit, orderNumber: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Номер заказа" />
+                <select value={bulkEdit.materialType} onChange={e => setBulkEdit({ ...bulkEdit, materialType: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white">
+                  <option value="">Вид материала без изменений</option>
+                  {materialTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                </select>
+                <input value={bulkEdit.materialName} onChange={e => setBulkEdit({ ...bulkEdit, materialName: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Наименование материала" />
+                <input type="number" value={bulkEdit.thickness} onChange={e => setBulkEdit({ ...bulkEdit, thickness: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Толщина, мм" />
+                <input type="number" value={bulkEdit.length} onChange={e => setBulkEdit({ ...bulkEdit, length: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Длина, мм" />
+                <input type="number" value={bulkEdit.width} onChange={e => setBulkEdit({ ...bulkEdit, width: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Ширина, мм" />
+                <input type="number" value={bulkEdit.quantity} onChange={e => setBulkEdit({ ...bulkEdit, quantity: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Количество" />
+                <input value={bulkEdit.comment} onChange={e => setBulkEdit({ ...bulkEdit, comment: e.target.value })} className="px-4 py-3 border rounded-lg dark:bg-gray-700 dark:text-white" placeholder="Комментарий" />
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowBulkEdit(false)} className="px-4 py-2 bg-gray-200 rounded-lg dark:bg-gray-700 dark:text-white">
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={() => void runBulkAction({
+                    action: 'update',
+                    ...Object.fromEntries(Object.entries(bulkEdit).filter(([, value]) => value !== '').map(([key, value]) => [
+                      key,
+                      ['thickness', 'length', 'width', 'quantity'].includes(key) ? Number(value) : value,
+                    ])),
+                  })}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:opacity-50"
+                >
+                  Сохранить
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

@@ -1,6 +1,6 @@
 // Типы для приложения учета остатков
 
-export type Role = 'ADMIN' | 'OPERATOR' | 'MASTER' | 'MANAGER';
+export type Role = 'ADMIN' | 'OPERATOR' | 'MASTER' | 'MANAGER' | 'TECHNOLOGIST';
 
 export type LeftoverStatus = 'AVAILABLE' | 'RESERVED' | 'USED' | 'SCRAPPED' | 'DELETED';
 
@@ -117,4 +117,5 @@ export const roleLabels: Record<Role, string> = {
   OPERATOR: 'Оператор',
   MASTER: 'Мастер',
   MANAGER: 'Менеджер',
+  TECHNOLOGIST: 'Технолог',
 };

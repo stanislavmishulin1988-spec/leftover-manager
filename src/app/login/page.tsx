@@ -203,6 +203,7 @@ export default function LoginPage() {
                 <option value="OPERATOR">Оператор</option>
                 <option value="MASTER">Мастер</option>
                 <option value="MANAGER">Менеджер</option>
+                <option value="TECHNOLOGIST">Технолог</option>
               </select>
               <input
                 type="text"

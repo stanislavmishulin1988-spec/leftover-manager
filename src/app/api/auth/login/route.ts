@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!['ADMIN', 'OPERATOR', 'MASTER', 'MANAGER'].includes(user.role)) {
+    if (!['ADMIN', 'OPERATOR', 'MASTER', 'MANAGER', 'TECHNOLOGIST'].includes(user.role)) {
       return NextResponse.json(
         { error: 'У пользователя неверная роль' },
         { status: 500 }

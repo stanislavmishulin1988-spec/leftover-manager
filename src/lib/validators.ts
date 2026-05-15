@@ -41,7 +41,7 @@ export const userSchema = z.object({
   name: z.string().min(1, 'Имя обязательно'),
   username: z.string().min(3, 'Логин минимум 3 символа'),
   password: z.string().min(4, 'Пароль минимум 4 символа'),
-  role: z.string().refine(r => ['ADMIN', 'OPERATOR', 'MASTER', 'MANAGER'].includes(r), 'Неверная роль'),
+  role: z.string().refine(r => ['ADMIN', 'OPERATOR', 'MASTER', 'MANAGER', 'TECHNOLOGIST'].includes(r), 'Неверная роль'),
 })
 
 export const registerSchema = z.object({
@@ -50,7 +50,7 @@ export const registerSchema = z.object({
   middleName: z.string().optional(),
   username: z.string().min(3, 'Логин минимум 3 символа'),
   password: z.string().min(4, 'Пароль минимум 4 символа'),
-  role: z.string().refine(r => ['OPERATOR', 'MASTER', 'MANAGER'].includes(r), 'Неверная должность'),
+  role: z.string().refine(r => ['OPERATOR', 'MASTER', 'MANAGER', 'TECHNOLOGIST'].includes(r), 'Неверная должность'),
 })
 
 // Схема для изменения статуса

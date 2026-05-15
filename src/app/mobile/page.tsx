@@ -145,7 +145,7 @@ export default function MobilePage() {
       <main className="p-4 pb-24">
         {user && (
           <p className="text-sm text-gray-600 mb-4">
-            👤 {user.name} ({user.role === 'ADMIN' ? 'Админ' : user.role === 'MASTER' ? 'Мастер' : user.role === 'MANAGER' ? 'Менеджер' : 'Оператор'})
+            👤 {user.name} ({user.role === 'ADMIN' ? 'Админ' : user.role === 'MASTER' ? 'Мастер' : user.role === 'MANAGER' ? 'Менеджер' : user.role === 'TECHNOLOGIST' ? 'Технолог' : 'Оператор'})
           </p>
         )}
 
